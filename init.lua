@@ -116,9 +116,10 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 
 		local player_inv = player:get_inventory();
 		local chest_inv  = meta:get_inventory();
+
 		if( fields.drop_all ) then
-			for i,v in ipairs( player_inv:get_list( inv_list )) do
-				if( chest_inv:room_for_item('main', v)) then
+			for i,v in ipairs( player_inv:get_list( inv_list ) or {}) do
+				if( chest_inv and chest_inv:room_for_item('main', v)) then
 					local leftover = chest_inv:add_item( 'main', v );
 					player_inv:remove_item( inv_list, v );
 					if( leftover and not( leftover:is_empty() )) then
@@ -127,7 +128,7 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 				end
 			end
 		elseif( fields.take_all ) then
-			for i,v in ipairs( chest_inv:get_list( 'main' )) do
+			for i,v in ipairs( chest_inv:get_list( 'main' ) or {}) do
 				if( player_inv:room_for_item( inv_list, v)) then
 					local leftover = player_inv:add_item( inv_list, v );
 					chest_inv:remove_item( 'main', v );
@@ -136,8 +137,26 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 					end
 				end
 			end
--- TODO: swap_all, filter_all
--- TODO: buttons for those combined operations
+
+		elseif( fields.swap_all ) then
+			for i,v in ipairs( player_inv:get_list( inv_list ) or {}) do
+				if( chest_inv ) then
+					local tmp = player_inv:get_stack( inv_list, i );
+					player_inv:set_stack(   inv_list, i, chest_inv:get_stack( 'main', i ));
+					chest_inv:set_stack(    'main',   i, v );
+				end
+			end
+
+		elseif( fields.filter_all ) then
+			for i,v in ipairs( player_inv:get_list( inv_list ) or {}) do
+				if( chest_inv and chest_inv:room_for_item('main', v) and chest_inv:contains_item( 'main', v:get_name())) then
+					local leftover = chest_inv:add_item( 'main', v );
+					player_inv:remove_item( inv_list, v );
+					if( leftover and not( leftover:is_empty() )) then
+						player_inv:add_item( inv_list, v );
+					end
+				end
+			end
 		end
 	end
 
