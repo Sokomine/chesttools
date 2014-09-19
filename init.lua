@@ -80,7 +80,7 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 			"button[7.5,4.5;0.5,0.5;take_all;TA]"..
 			"button[8.0,4.5;0.5,0.5;swap_all;SA]"..
 			"button[8.5,4.5;0.5,0.5;filter_all;FA]";
-	local bm = "button[0.0,4.5;1,0.5;main;Mail]";
+	local bm = "button[0.0,4.5;1,0.5;main;Main]";
 	local bc = "button[1.0,4.5;1,0.5;craft;Craft]";
 	local b1 = "button[2.0,4.5;1,0.5;bag1;Bag 1]";
 	local b2 = "button[3.0,4.5;1,0.5;bag2;Bag 2]";
@@ -295,6 +295,9 @@ chesttools.update_chest = function(pos, formname, fields, player)
 		player_inv:add_item(    'main', 'default:steel_ingot '..tostring( price ));
 	end
 
+	-- set the owner field
+	meta:set_string( 'owner', pname );
+
 	target = node.name;
 	if( fields.locked ) then
 		target = 'default:chest_locked';
@@ -307,8 +310,6 @@ chesttools.update_chest = function(pos, formname, fields, player)
 		meta:set_string("infotext", "Chest")
 	end
 
-	-- set the owner field
-	meta:set_string( 'owner', pname );
 	if( not( fields.shared )) then
 		meta:set_string("formspec", "size[9,10]"..
 				    "list[current_name;main;0.5,0.3;8,4;]"..
