@@ -468,3 +468,9 @@ minetest.register_node( 'chesttools:shared_chest', {
 		return nil;
 	end,
 })
+
+minetest.register_craft({
+	output = 'chesttools:shared_chest',
+	type   = 'shapeless',
+	recipe = { 'default:steel_ingot', 'default:chest_locked' },
+})
