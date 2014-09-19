@@ -228,14 +228,116 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 end
 
 
+chesttools.update_chest = function(pos, formname, fields, player)
+	local pname = player:get_player_name();
+	if( not( pos ) or not( pos.x ) or not( pos.y ) or not( pos.z )) then
+		return;
+	end
+	local node = minetest.get_node( pos );
+
+	local price = 1;
+	if(     node.name=='default:chest' ) then
+		if( fields.normal) then
+			return;
+		end
+		if( fields.locked ) then
+			price = 1;
+		elseif( fields.shared ) then
+			price = 2;
+		end
+	elseif( node.name=='default:chest_locked' ) then
+		if( fields.locked) then
+			return;
+		end
+		if( fields.normal ) then
+			price = -1;
+		elseif( fields.shared ) then
+			price = 1;
+		end
+		
+	elseif( node.name=='chesttools:shared_chest') then 
+		if( fields.shared) then
+			return;
+		end
+		if( fields.normal ) then
+			price = -2;
+		elseif( fields.locked ) then
+			price = -1;
+		end
+
+	else
+		return;
+	end
+
+	local player_inv = player:get_inventory();
+	if( price>0 and not( player_inv:contains_item( 'main', 'default:steel_ingot '..tostring( price )))) then
+		minetest.chat_send_player( pname, 'Sorry. You do not have '..tostring( price )..' steel ingots for the update.');
+		return;
+	end
+
+	-- only work on chests owned by the player (or unlocked ones)
+	local meta = minetest.get_meta( pos );
+	if( node.name ~= 'default:chest' and meta:get_string( 'owner' ) ~= pname ) then
+		minetest.chat_send_player( pname, 'You can only upgrade your own chests.');
+		return;
+	end
+
+	-- check if steel ingot is present
+	if( minetest.is_protected(pos, pname )) then
+		minetest.chat_send_player( pname, 'This chest is protected from digging.');
+		return;
+	end
+
+	if( price     > 0 ) then
+		player_inv:remove_item( 'main', 'default:steel_ingot '..tostring( price ));
+	elseif( price < 0 ) then
+		price = price * -1;
+		player_inv:add_item(    'main', 'default:steel_ingot '..tostring( price ));
+	end
+
+	target = node.name;
+	if( fields.locked ) then
+		target = 'default:chest_locked';
+		meta:set_string("infotext", "Locked Chest (owned by "..meta:get_string("owner")..")")
+	elseif( fields.shared ) then
+		target = 'chesttools:shared_chest';
+		meta:set_string("infotext", "Shared Chest (owned by "..meta:get_string("owner")..")")
+	else
+		target = 'default:chest';
+		meta:set_string("infotext", "Chest")
+	end
+
+	-- set the owner field
+	meta:set_string( 'owner', pname );
+	if( not( fields.shared )) then
+		meta:set_string("formspec", "size[9,10]"..
+				    "list[current_name;main;0.5,0.3;8,4;]"..
+				    "list[current_player;main;0.5,5.5;8,4;]");
+	else
+		meta:set_string("formspec", chesttools.formspec..
+				    "list[current_player;main;0.5,5.5;8,4;]");
+	end
+	minetest.swap_node( pos, { name = target, param2 = node.param2 });
+
+	minetest.chat_send_player( pname, 'Chest changed to '..tostring( minetest.registered_nodes[ target].description )..
+			' for '..tostring( price )..' steel ingots.'); 
+end
+
+
 -- translate general formspec calls back to specific chests/locations
 chesttools.form_input_handler = function( player, formname, fields)
-	if( formname == "chesttools:shared_chest" and fields.pos2str ) then
+	if( (formname == "chesttools:shared_chest" or formname == "chesttools:update") and fields.pos2str ) then
 		local pos = minetest.string_to_pos( fields.pos2str );
-		chesttools.on_receive_fields(pos, formname, fields, player);
+		if(     formname == "chesttools:shared_chest") then
+			chesttools.on_receive_fields(pos, formname, fields, player);
+		elseif( formname == "chesttools:update") then
+			chesttools.update_chest(     pos, formname, fields, player);
+		end
+		
 		return;
 	end
 end
+
 
 -- establish a callback so that input from the player-specific formspec gets handled
 minetest.register_on_player_receive_fields( chesttools.form_input_handler );
@@ -317,5 +419,52 @@ minetest.register_node( 'chesttools:shared_chest', {
 			return;
 		end
 		chesttools.on_receive_fields( pos, formname, fields, sender);
+	end,
+
+	on_use = function(itemstack, user, pointed_thing)
+		if( user == nil or pointed_thing == nil or pointed_thing.type ~= 'node') then
+			return nil;
+		end
+		local name = user:get_player_name();
+
+		local pos  = minetest.get_pointed_thing_position( pointed_thing, mode );
+		local node = minetest.env:get_node_or_nil( pos );
+
+		if( node == nil or not( node.name )) then
+			return nil;
+		end
+
+		if(    node.name=='default:chest' 
+		    or node.name=='default:chest_locked' 
+		    or node.name=='chesttools:shared_chest') then 
+
+			local formspec = "size[8,4]"..
+					 "label[2,0.4;Change chest type:]"..
+					 "field[20,20;0.1,0.1;pos2str;Pos;"..minetest.pos_to_string( pos ).."]"..
+					 "button_exit[2,3.5;1.5,0.5;abort;Abort]";
+			if( node.name ~= 'default:chest' ) then
+				formspec = formspec..'item_image_button[1,1;1.5,1.5;default:chest;normal;]'..
+					   'button_exit[1,2.5;1.5,0.5;normal;normal]';
+			else
+				formspec = formspec..'item_image[1,1;1.5,1.5;default:chest]'..
+					   'label[1,2.5;normal]';
+			end
+			if( node.name ~= 'default:chest_locked' ) then
+				formspec = formspec..'item_image_button[3,1;1.5,1.5;default:chest_locked;locked;]'..
+					   'button_exit[3,2.5;1.5,0.5;locked;locked]';
+			else
+				formspec = formspec..'item_image[3,1;1.5,1.5;default:chest_locked]'..
+					   'label[3,2.5;locked]';
+			end
+			if( node.name ~= 'chesttools:shared_chest' ) then
+				formspec = formspec..'item_image_button[5,1;1.5,1.5;chesttools:shared_chest;shared;]'..
+					   'button_exit[5,2.5;1.5,0.5;shared;shared]';
+			else
+				formspec = formspec..'item_image[5,1;1.5,1.5;chesttools:shared_chest]'..
+					   'label[5,2.5;shared]';
+			end
+			minetest.show_formspec( name, "chesttools:update", formspec );	
+		end
+		return nil;
 	end,
 })
