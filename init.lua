@@ -1,3 +1,4 @@
+-- 05.10.14 Fixed bug in protection/access
 
 chesttools = {}
 
@@ -66,7 +67,7 @@ chesttools.may_use = function( pos, player )
 	      and  minetest.is_protected(pos, ' _DUMMY_PLAYER_ ')) then
 		return true;
 	end
-	return true;
+	return false;
 end
 
 
