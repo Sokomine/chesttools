@@ -55,15 +55,18 @@ end
 
 
 chesttools.may_use = function( pos, player )
+	if( not( player )) then
+		return false;
+	end
 	local name = player:get_player_name();
 	local meta = minetest.get_meta( pos );
 	local owner = meta:get_string( 'owner' )
 	-- the owner can access the chest
-	if( onwer == name or owner == "" ) then
+	if( owner == name or owner == "" ) then
 		return true;
 	end
 	-- the shared function only kicks in if the area is protected
-	if(   not( minetest.is_protected(pos, player:get_player_name()))
+	if(   not( minetest.is_protected(pos, name ))
 	      and  minetest.is_protected(pos, ' _DUMMY_PLAYER_ ')) then
 		return true;
 	end
