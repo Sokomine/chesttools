@@ -38,6 +38,9 @@ end
 
 chesttools.formspec = "size[9,10]"..
 			"list[current_name;main;0.5,0.3;8,4;]"..
+			"label[0.0,9.7;Title/Content:]"..
+			"field[1.8,10.0;6,0.5;chestname;;]"..
+			"button[7.5,9.7;1,0.5;set_chestname;Store]"..
 			"label[0.0,4.4;Main]"..
 			"button[1.0,4.5;1,0.5;craft;Craft]"..
 			"button[7.0,4.5;0.5,0.5;drop_all;DA]"..
@@ -78,7 +81,23 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	if( fields.quit ) then
 		return;
 	end
+
+	local meta = minetest.get_meta( pos );
+	local chestname = meta:get_string( 'chestname' );
+	if( fields.set_chestname and fields.chestname ) then
+		chestname = tostring( fields.chestname );
+		meta:set_string( 'chestname', chestname );
+		meta:set_string("infotext", "\""..chestname.."\" Chest (owned by "..meta:get_string("owner")..")")
+		-- update the normal formspec
+		meta:set_string("formspec", chesttools.formspec..
+				    "field[1.8,10.0;6,0.5;chestname;;"..chestname.."]"..
+				    "list[current_player;main;0.5,5.5;8,4;]");
+	end
+
 	local formspec = "size[9,10]"..
+			"label[0.0,9.7;Title/Content:]"..
+			"field[1.8,10.0;6,0.5;chestname;;"..tostring( chestname or "unconfigured").."]"..
+			"button[7.5,9.7;1,0.5;set_chestname;Store]"..
 			"list[current_name;main;0.5,0.3;8,4;]"..
 			"button[7.0,4.5;0.5,0.5;drop_all;DA]"..
 			"button[7.5,4.5;0.5,0.5;take_all;TA]"..
@@ -95,7 +114,6 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	if( fields.drop_all or fields.take_all or fields.swap_all or fields.filter_all ) then
 		-- check if the player has sufficient access to the chest
 		local node = minetest.get_node( pos );
-		local meta = minetest.get_meta( pos );
 		-- deny access for unsupported chests
 		if( not( node )
 		    or (node.name == 'chesttools:shared_chest' and not( chesttools.may_use( pos, player )))
@@ -106,7 +124,7 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 			end
 		end
 		selected = fields.selected;
-		if( not( selected ) or selected == '' ) then
+		if( not( selected ) or selected == '') then
 			selected = 'main';
 		end
 		local inv_list = 'main';
@@ -164,9 +182,8 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		end
 	end
 
-	local meta = minetest.get_meta( pos );
 	local bag_nr = 0;
-	if(     fields[ 'main'] or selected=='main') then
+	if(     fields[ 'main'] or selected=='main' or fields['set_chestname']) then
 		bag_nr = 0;
 		formspec = formspec..
 			"list[current_player;main;0.5,5.5;8,4;]";
@@ -320,6 +337,7 @@ chesttools.update_chest = function(pos, formname, fields, player)
 				    "list[current_player;main;0.5,5.5;8,4;]");
 	else
 		meta:set_string("formspec", chesttools.formspec..
+				    "field[1.8,10.0;6,0.5;chestname;;"..tostring( meta:get_string("chestname") or "unconfigured").."]"..
 				    "list[current_player;main;0.5,5.5;8,4;]");
 	end
 	minetest.swap_node( pos, { name = target, param2 = node.param2 });
@@ -333,6 +351,9 @@ end
 chesttools.form_input_handler = function( player, formname, fields)
 	if( (formname == "chesttools:shared_chest" or formname == "chesttools:update") and fields.pos2str ) then
 		local pos = minetest.string_to_pos( fields.pos2str );
+		if( not( chesttools.may_use( pos, player ))) then
+			return;
+		end
 		if(     formname == "chesttools:shared_chest") then
 			chesttools.on_receive_fields(pos, formname, fields, player);
 		elseif( formname == "chesttools:update") then
