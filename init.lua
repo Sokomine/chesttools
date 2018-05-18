@@ -186,7 +186,9 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	if(     fields[ 'main'] or selected=='main' or fields['set_chestname']) then
 		bag_nr = 0;
 		formspec = formspec..
-			"list[current_player;main;0.5,5.5;8,4;]";
+			"list[current_player;main;0.5,5.5;8,4;]"..
+			"listring[current_name;main]"..
+			"listring[current_player;main]";
 		bm = "label[0.0,4.4;Main]";
 		selected = 'main';
 
@@ -195,7 +197,9 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		formspec = formspec..
 			"label[0,5.5;Crafting]"..
 			"list[current_player;craftpreview;6.5,6.5;1,1;]"..
-			"list[current_player;craft;2.5,6.5;3,3;]";
+			"list[current_player;craft;2.5,6.5;3,3;]"..
+			"listring[current_name;main]"..
+			"listring[current_player;craft]";
 		bc = "label[1.0,4.4;Craft]";
 		selected = 'craft';
 
@@ -230,7 +234,9 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 			local slots = stack:get_definition().groups.bagslots
 			if( slots and slots>0 ) then -- no bag present?
 				formspec = formspec..
-					"list[current_player;bag"..bag_nr.."contents;0.5,6.5;8,"..tostring(slots/8)..";]";
+					"list[current_player;bag"..bag_nr.."contents;0.5,6.5;8,"..tostring(slots/8)..";]"..
+					"listring[current_name;main]"..
+					"listring[current_player;bag"..bag_nr.."contents]";
 			end
 		end
 	end
@@ -334,11 +340,15 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	if( not( fields.shared )) then
 		meta:set_string("formspec", "size[9,10]"..
 				    "list[current_name;main;0.5,0.3;8,4;]"..
-				    "list[current_player;main;0.5,5.5;8,4;]");
+				    "list[current_player;main;0.5,5.5;8,4;]"..
+					"listring[current_name;main]"..
+					"listring[current_player;main]")
 	else
 		meta:set_string("formspec", chesttools.formspec..
 				    "field[1.8,10.0;6,0.5;chestname;;"..tostring( meta:get_string("chestname") or "unconfigured").."]"..
-				    "list[current_player;main;0.5,5.5;8,4;]");
+				    "list[current_player;main;0.5,5.5;8,4;]"..
+					"listring[current_name;main]"..
+					"listring[current_player;main]");
 	end
 	minetest.swap_node( pos, { name = target, param2 = node.param2 });
 
@@ -393,7 +403,9 @@ minetest.register_node( 'chesttools:shared_chest', {
 		local inv = meta:get_inventory()
 		inv:set_size("main", 8*4)
 		meta:set_string("formspec", chesttools.formspec..
-					"list[current_player;main;0.5,5.5;8,4;]");
+					"list[current_player;main;0.5,5.5;8,4;]"..
+					"listring[current_name;main]"..
+					"listring[current_player;main]");
 	end,
 
 	can_dig = function(pos,player)
