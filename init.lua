@@ -78,7 +78,7 @@ end
 
 
 chesttools.on_receive_fields = function(pos, formname, fields, player)
-	if( fields.quit ) then
+	if( fields.quit and fields.quit ~= "") then
 		return;
 	end
 
