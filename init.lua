@@ -254,6 +254,9 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	if( not( pos ) or not( pos.x ) or not( pos.y ) or not( pos.z )) then
 		return;
 	end
+	if( fields.abort and fields.abort ~= "") then
+		return;
+	end
 	local node = minetest.get_node( pos );
 
 	local price = 1;
