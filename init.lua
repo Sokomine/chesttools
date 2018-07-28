@@ -1,3 +1,4 @@
+-- 28.07.18 Works with newer unified_inventory as well.
 -- 28.07.18 Added support for technic chests.
 -- 27.07.18 Added support for shared locked chests and moved to set_node
 --          with inventory copying for cleaner operation.
@@ -251,16 +252,14 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		formspec = formspec..
 			"label[0.5,5.5;Bag "..bag_nr.."]";
 		local stack = player:get_inventory():get_stack( "bag"..bag_nr, 1)
-		if( stack and not( stack:is_empty())) then
-			local image = stack:get_definition().inventory_image
-			if( image ) then
-				formspec = formspec..
-					"image[7.5,5.5;1,1;"..image.."]";
-			end
-			local slots = stack:get_definition().groups.bagslots
+		if( stack ) then
+			local pname_esc = minetest.formspec_escape(player:get_player_name());
+			formspec = formspec.."list[detached:"..pname_esc.."_bags;bag"..
+				   tostring(bag_nr)..";1.5,5.5;1,1;]";
+			local slots = 4*8;
 			if( slots and slots>0 ) then -- no bag present?
 				formspec = formspec..
-					"list[current_player;bag"..bag_nr.."contents;0.5,6.5;8,"..tostring(slots/8)..";]";
+					"list[current_player;bag"..tostring(bag_nr).."contents;0.5,6.5;8,"..tostring(slots/8)..";]";
 			end
 		end
 	end
