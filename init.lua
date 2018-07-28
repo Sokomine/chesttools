@@ -16,6 +16,16 @@ chesttools.update_price = {
 	{'default:chest_locked',      'default:steel_ingot', 1, 'locked', 2, 'steel ingot'},
 	{'chesttools:shared_chest',   'default:steel_ingot', 2, 'shared', 3, 'steel ingot(s)'},
 	{'locks:shared_locked_chest', 'default:steel_ingot', 3, 'locks',  4, 'steel ingot(s)'},
+	{'technic:iron_chest',          'technic:iron_chest',          1, 'iron',          5, 'Iron chest'},
+	{'technic:iron_locked_chest',   'technic:iron_locked_chest',   1, 'iron_locked',   6, 'Iron locked chest'},
+	{'technic:copper_chest',        'technic:copper_chest',        1, 'copper',        7, 'Copper chest'},
+	{'technic:copper_locked_chest', 'technic:copper_locked_chest', 1, 'copper_locked', 8, 'Copper locked chest'},
+	{'technic:silver_chest',        'technic:silver_chest',        1, 'silver',        9, 'Silver chest'},
+	{'technic:silver_locked_chest', 'technic:silver_locked_chest', 1, 'silver_locked',10, 'Silver locked chest'},
+	{'technic:gold_chest',          'technic:gold_chest',          1, 'gold',         11, 'Gold chest'},
+	{'technic:gold_locked_chest',   'technic:gold_locked_chest',   1, 'gold_locked',  12, 'Gold locked chest'},
+	{'technic:mithril_chest',       'technic:mithril_chest',       1, 'mithril',      13, 'Mithril chest'},
+	{'technic:mithril_locked_chest','technic:mithril_locked_chest',1, 'mithril_locked',14, 'Mithril locked chest'},
 	};
 
 chesttools.chest_add = {};
@@ -494,31 +504,41 @@ minetest.register_node( 'chesttools:shared_chest', {
 
 		local formspec = "label[2,0.4;Change chest type:]"..
 				 "field[20,20;0.1,0.1;pos2str;Pos;"..minetest.pos_to_string( pos ).."]"..
-				 "button_exit[2,3.5;1.5,0.5;abort;Abort]";
+				 "button_exit[2,6.0;1.5,0.5;abort;Abort]";
 
 		local can_be_upgraded = false;
-		local offset = 1;
+		local offset = 0.5;
+		local row_offset = 0;
 		for nr, update_data in ipairs( chesttools.update_price ) do
 			local link = tostring(update_data[4]);
 			local chest_node_name = update_data[1];
 			-- only offer possible updates
 			if( minetest.registered_nodes[ chest_node_name ]) then
 				if( node.name ~= chest_node_name ) then
-					formspec = formspec..'item_image_button['..tostring(offset)..',1;1.5,1.5;'..
+					formspec = formspec..'item_image_button['..tostring(offset)..','..
+								tostring(1+row_offset)..';1.5,1.5;'..
 								chest_node_name..';'..link..';]'..
-							'button_exit['..tostring(offset)..',2.5;1.5,0.5;'..
+							'button_exit['..tostring(offset)..','..
+								tostring(2.5+row_offset)..';1.5,0.5;'..
 								link..';'..link..']';
 				else
 					can_be_upgraded = true;
-					formspec = formspec..'item_image['..tostring(offset)..',1;1.5,1.5;'..
+					formspec = formspec..'item_image['..tostring(offset)..','..
+								tostring(1+row_offset)..';1.5,1.5;'..
 								chest_node_name..']'..
-							'label['..tostring(offset)..',2.5;'..link..']';
+							'label['..tostring(offset)..','..
+								tostring(2.5+row_offset)..';'..link..']';
 				end
 				offset = offset + 2;
+				if( offset >= 15.5 ) then
+					row_offset = 2.5;
+					offset = 0.5;
+				end
 			end
 		end
+		offset = 16;
 		-- make the formspec wide enough to show all chests centered
-		formspec = 'size['..tostring(offset)..',4]'..formspec;
+		formspec = 'size['..tostring(offset)..',6.5]'..formspec;
 		-- only show the formspec if it really is a chest that can be updated
 		if( can_be_upgraded ) then
 			minetest.show_formspec( name, "chesttools:update", formspec );	
