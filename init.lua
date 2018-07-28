@@ -1,3 +1,4 @@
+-- 28.07.18 Added support for technic chests.
 -- 27.07.18 Added support for shared locked chests and moved to set_node
 --          with inventory copying for cleaner operation.
 -- 05.10.14 Fixed bug in protection/access
@@ -379,8 +380,22 @@ chesttools.update_chest = function(pos, formname, fields, player)
 		new_inv:set_stack( "main", i, main_inv[ i ]);
 	end
 
+	-- if the new chest has fewer slots than the old one had...
 	if( new_inv_size < inv_size ) then
-		-- TODO: problem here...where to put all that surplus inventory?
+		-- try to put the inventory into the new chest anyway (there
+		-- might be free slots or stacks that can take a bit more)
+		for i=new_inv_size+1, inv_size do
+			-- try to find free space elsewhere in the chest
+			if( new_inv:room_for_item(         "main", main_inv[ i ])) then
+				new_inv:add_item(          "main", main_inv[ i ]);
+			-- ..or in the player's inventory
+			elseif( player_inv:room_for_item( "main", main_inv[ i ])) then
+				player_inv:add_item(      "main", main_inv[ i ]);
+			-- drop the item above the chest
+			else
+				minetest.add_item({x=pos.x,y=pos.y+1,z=pos.z}, main_inv[i]);
+			end
+		end
 	end
 
 	minetest.chat_send_player( pname, 'Chest changed to '..tostring( minetest.registered_nodes[ new_node_name].description )..
