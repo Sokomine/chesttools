@@ -1,3 +1,4 @@
+-- 30.07.18 Removed pipeworks overlay on front side of chest.
 -- 28.07.18 Works with newer unified_inventory as well.
 -- 28.07.18 Added support for technic chests.
 -- 27.07.18 Added support for shared locked chests and moved to set_node
@@ -46,7 +47,8 @@ if( minetest.get_modpath( 'pipeworks' )) then
 		"chesttools_blue_chest_top.png^pipeworks_tube_connection_wooden.png",
 		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
 		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
-		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png"};
+		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
+		"chesttools_blue_chest_lock.png"};
 	chesttools.chest_add.groups = {snappy=2,choppy=2,oddly_breakable_by_hand=2,
 			tubedevice = 1, tubedevice_receiver = 1 };
 	chesttools.chest_add.tube = {
