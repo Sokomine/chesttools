@@ -1,6 +1,35 @@
+-- 30.07.18 Removed pipeworks overlay on front side of chest.
+-- 28.07.18 Works with newer unified_inventory as well.
+-- 28.07.18 Added support for technic chests.
+-- 27.07.18 Added support for shared locked chests and moved to set_node
+--          with inventory copying for cleaner operation.
 -- 05.10.14 Fixed bug in protection/access
-
 chesttools = {}
+
+
+-- data structure: new_node_name = { item_that_acts_as_price,
+--                                   amount_of_price_item,
+--                                   name_for_field_in_menu,
+--                                   index_for_display_in_menu,
+--                                   name of price item for showing the player,
+--                                   new formspec string}
+-- prices always refer to upgrading a default:chest to the desired new model
+chesttools.update_price = {
+	{'default:chest',             'default:steel_ingot', 0, 'normal', 1, 'nothing'},
+	{'default:chest_locked',      'default:steel_ingot', 1, 'locked', 2, 'steel ingot'},
+	{'chesttools:shared_chest',   'default:steel_ingot', 2, 'shared', 3, 'steel ingot(s)'},
+	{'locks:shared_locked_chest', 'default:steel_ingot', 3, 'locks',  4, 'steel ingot(s)'},
+	{'technic:iron_chest',          'technic:iron_chest',          1, 'iron',          5, 'Iron chest'},
+	{'technic:iron_locked_chest',   'technic:iron_locked_chest',   1, 'iron_locked',   6, 'Iron locked chest'},
+	{'technic:copper_chest',        'technic:copper_chest',        1, 'copper',        7, 'Copper chest'},
+	{'technic:copper_locked_chest', 'technic:copper_locked_chest', 1, 'copper_locked', 8, 'Copper locked chest'},
+	{'technic:silver_chest',        'technic:silver_chest',        1, 'silver',        9, 'Silver chest'},
+	{'technic:silver_locked_chest', 'technic:silver_locked_chest', 1, 'silver_locked',10, 'Silver locked chest'},
+	{'technic:gold_chest',          'technic:gold_chest',          1, 'gold',         11, 'Gold chest'},
+	{'technic:gold_locked_chest',   'technic:gold_locked_chest',   1, 'gold_locked',  12, 'Gold locked chest'},
+	{'technic:mithril_chest',       'technic:mithril_chest',       1, 'mithril',      13, 'Mithril chest'},
+	{'technic:mithril_locked_chest','technic:mithril_locked_chest',1, 'mithril_locked',14, 'Mithril locked chest'},
+	};
 
 chesttools.chest_add = {};
 chesttools.chest_add.tiles  = {
@@ -8,6 +37,7 @@ chesttools.chest_add.tiles  = {
 		"chesttools_blue_chest_side.png", "chesttools_blue_chest_side.png", "chesttools_blue_chest_lock.png"};
 chesttools.chest_add.groups = {snappy=2,choppy=2,oddly_breakable_by_hand=2};
 chesttools.chest_add.tube   = {};
+
 
 -- additional/changed definitions for pipeworks;
 -- taken from pipeworks/compat.lua
@@ -17,7 +47,8 @@ if( minetest.get_modpath( 'pipeworks' )) then
 		"chesttools_blue_chest_top.png^pipeworks_tube_connection_wooden.png",
 		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
 		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
-		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png"};
+		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
+		"chesttools_blue_chest_lock.png"};
 	chesttools.chest_add.groups = {snappy=2,choppy=2,oddly_breakable_by_hand=2,
 			tubedevice = 1, tubedevice_receiver = 1 };
 	chesttools.chest_add.tube = {
@@ -46,7 +77,8 @@ chesttools.formspec = "size[9,10]"..
 			"button[7.0,4.5;0.5,0.5;drop_all;DA]"..
 			"button[7.5,4.5;0.5,0.5;take_all;TA]"..
 			"button[8.0,4.5;0.5,0.5;swap_all;SA]"..
-			"button[8.5,4.5;0.5,0.5;filter_all;FA]";
+			"button[8.5,4.5;0.5,0.5;filter_all;FA]"..
+			"list[current_player;main;0.5,5.5;8,4;]";
 
 if( minetest.get_modpath( 'unified_inventory')) then
 	chesttools.formspec = chesttools.formspec..
@@ -78,7 +110,7 @@ end
 
 
 chesttools.on_receive_fields = function(pos, formname, fields, player)
-	if( fields.quit ) then
+	if( fields.quit and fields.quit ~= "") then
 		return;
 	end
 
@@ -90,8 +122,7 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		meta:set_string("infotext", "\""..chestname.."\" Chest (owned by "..meta:get_string("owner")..")")
 		-- update the normal formspec
 		meta:set_string("formspec", chesttools.formspec..
-				    "field[1.8,10.0;6,0.5;chestname;;"..chestname.."]"..
-				    "list[current_player;main;0.5,5.5;8,4;]");
+				    "field[1.8,10.0;6,0.5;chestname;;"..chestname.."]");
 	end
 
 	local formspec = "size[9,10]"..
@@ -114,12 +145,14 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	if( fields.drop_all or fields.take_all or fields.swap_all or fields.filter_all ) then
 		-- check if the player has sufficient access to the chest
 		local node = minetest.get_node( pos );
+		local pname = player:get_player_name();
 		-- deny access for unsupported chests
 		if( not( node )
 		    or (node.name == 'chesttools:shared_chest' and not( chesttools.may_use( pos, player )))
-		    or (node.name == 'default:chest_locked'and player:get_player_name() ~= meta:get_string('owner' ))) then
+		    or (node.name == 'locks:shared_locked_chest'and pname ~= meta:get_string('owner' ))
+		    or (node.name == 'default:chest_locked'and pname ~= meta:get_string('owner' ))) then
 			if( node.name ~= 'default:chest' ) then
-				minetest.chat_send_player( player:get_player_name(), 'Sorry, you do not have access to the content of this chest.');
+				minetest.chat_send_player( pname, 'Sorry, you do not have access to the content of this chest.');
 				return;
 			end
 		end
@@ -225,19 +258,17 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		formspec = formspec..
 			"label[0.5,5.5;Bag "..bag_nr.."]";
 		local stack = player:get_inventory():get_stack( "bag"..bag_nr, 1)
-		if( stack and not( stack:is_empty())) then
-			local image = stack:get_definition().inventory_image
-			if( image ) then
-				formspec = formspec..
-					"image[7.5,5.5;1,1;"..image.."]";
-			end
-			local slots = stack:get_definition().groups.bagslots
+		if( stack ) then
+			local pname_esc = minetest.formspec_escape(player:get_player_name());
+			formspec = formspec.."list[detached:"..pname_esc.."_bags;bag"..
+				   tostring(bag_nr)..";1.5,5.5;1,1;]";
+			local slots = 4*8;
 			if( slots and slots>0 ) then -- no bag present?
 				formspec = formspec..
-					"list[current_player;bag"..bag_nr.."contents;0.5,6.5;8,"..tostring(slots/8)..";]"..
+					"list[current_player;bag"..tostring(bag_nr).."contents;0.5,6.5;8,"..tostring(slots/8)..";]"..
 					"listring[current_name;main]"..
 					"listring[current_player;bag"..bag_nr.."contents]";
-			end
+      end
 		end
 	end
 
@@ -260,100 +291,121 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	if( not( pos ) or not( pos.x ) or not( pos.y ) or not( pos.z )) then
 		return;
 	end
-	local node = minetest.get_node( pos );
-
-	local price = 1;
-	if(     node.name=='default:chest' ) then
-		if( fields.normal) then
-			return;
-		end
-		if( fields.locked ) then
-			price = 1;
-		elseif( fields.shared ) then
-			price = 2;
-		end
-	elseif( node.name=='default:chest_locked' ) then
-		if( fields.locked) then
-			return;
-		end
-		if( fields.normal ) then
-			price = -1;
-		elseif( fields.shared ) then
-			price = 1;
-		end
-		
-	elseif( node.name=='chesttools:shared_chest') then 
-		if( fields.shared) then
-			return;
-		end
-		if( fields.normal ) then
-			price = -2;
-		elseif( fields.locked ) then
-			price = -1;
-		end
-
-	else
+	if( fields.abort and fields.abort ~= "") then
 		return;
 	end
+	local node = minetest.get_node( pos );
 
-	local player_inv = player:get_inventory();
-	if( price>0 and not( player_inv:contains_item( 'main', 'default:steel_ingot '..tostring( price )))) then
-		minetest.chat_send_player( pname, 'Sorry. You do not have '..tostring( price )..' steel ingots for the update.');
+	local old_nr = -1;
+	local new_nr = -1;
+	for nr, update_data in ipairs( chesttools.update_price ) do
+		local link = tostring(update_data[4]);
+		local chest_node_name = update_data[1];
+		if(     chest_node_name == node.name ) then
+			old_nr = nr;
+		elseif( fields[ link ] and fields[ link ] ~= "") then
+			new_nr = nr;
+		end
+	end
+	-- no change necessary
+	if( old_nr == -1 or new_nr == -1 or old_nr == new_nr ) then
 		return;
+	end
+	local new_node_name= chesttools.update_price[ new_nr ][1];
+	local price_item   = chesttools.update_price[ new_nr ][2];
+	local price_amount = chesttools.update_price[ new_nr ][3];
+	local price_name   = chesttools.update_price[ new_nr ][6];
+	-- do they both use the same price?
+	if( chesttools.update_price[ old_nr ][2] == price_item ) then
+		-- the price for the old chest type gets substracted
+		price_amount = price_amount - chesttools.update_price[ old_nr ][3];
 	end
 
 	-- only work on chests owned by the player (or unlocked ones)
 	local meta = minetest.get_meta( pos );
-	if( node.name ~= 'default:chest' and meta:get_string( 'owner' ) ~= pname ) then
+	local owner = meta:get_string( 'owner' );
+	if( node.name ~= 'default:chest' and owner and owner ~= pname and owner ~= "") then
 		minetest.chat_send_player( pname, 'You can only upgrade your own chests.');
 		return;
 	end
 
-	-- check if steel ingot is present
+	-- can the player build here (and thus change this chest)?
 	if( minetest.is_protected(pos, pname )) then
 		minetest.chat_send_player( pname, 'This chest is protected from digging.');
 		return;
 	end
 
-	if( price     > 0 ) then
-		player_inv:remove_item( 'main', 'default:steel_ingot '..tostring( price ));
-	elseif( price < 0 ) then
-		price = price * -1;
-		player_inv:add_item(    'main', 'default:steel_ingot '..tostring( price ));
+	local player_inv = player:get_inventory();
+	if( price_amount>0 and not( player_inv:contains_item( 'main', price_item..' '..price_amount))) then
+		minetest.chat_send_player( pname, 'Sorry. You do not have '..tostring( price_amount )..
+			' '..price_name..' for the update.');
+		return;
+	end
+
+	if(     price_amount  > 0 ) then
+		player_inv:remove_item( 'main', price_item..' '..tostring(price_amount));
+	elseif( price_amount < 0 ) then
+		price_amount = price_amount * -1;
+		player_inv:add_item(    'main', price_item..' '..tostring(price_amount));
+	end
+	-- if the old chest type had a diffrent price: return that price
+	if( chesttools.update_price[ old_nr ][2] ~= price_item ) then
+		local old_price_item   = chesttools.update_price[ old_nr ][2];
+		local old_price_amount = chesttools.update_price[ old_nr ][3];
+		player_inv:add_item(    'main', old_price_item..' '..tostring(old_price_amount));
 	end
 
 	-- set the owner field
 	meta:set_string( 'owner', pname );
 
-	target = node.name;
 	if( fields.locked ) then
-		target = 'default:chest_locked';
 		meta:set_string("infotext", "Locked Chest (owned by "..meta:get_string("owner")..")")
 	elseif( fields.shared ) then
-		target = 'chesttools:shared_chest';
 		meta:set_string("infotext", "Shared Chest (owned by "..meta:get_string("owner")..")")
 	else
-		target = 'default:chest';
 		meta:set_string("infotext", "Chest")
 	end
-
-	if( not( fields.shared )) then
-		meta:set_string("formspec", "size[9,10]"..
-				    "list[current_name;main;0.5,0.3;8,4;]"..
-				    "list[current_player;main;0.5,5.5;8,4;]"..
-					"listring[current_name;main]"..
-					"listring[current_player;main]")
-	else
-		meta:set_string("formspec", chesttools.formspec..
-				    "field[1.8,10.0;6,0.5;chestname;;"..tostring( meta:get_string("chestname") or "unconfigured").."]"..
-				    "list[current_player;main;0.5,5.5;8,4;]"..
-					"listring[current_name;main]"..
-					"listring[current_player;main]");
+	-- copy the old inventory
+	local inv = meta:get_inventory();
+	local main_inv = {};
+	local inv_size = inv:get_size("main");
+	for i=1, inv_size do
+		main_inv[ i ] = inv:get_stack( "main", i);
+		print("Found: "..tostring( main_inv[ i ]:get_name()));
 	end
-	minetest.swap_node( pos, { name = target, param2 = node.param2 });
 
-	minetest.chat_send_player( pname, 'Chest changed to '..tostring( minetest.registered_nodes[ target].description )..
-			' for '..tostring( price )..' steel ingots.'); 
+	-- actually change and initialize the new chest
+	minetest.set_node( pos, { name = new_node_name, param2 = node.param2 });
+	-- make sure the player owns the new chest
+	meta:set_string("owner", pname);
+
+	-- put the inventory back
+	local new_inv      = meta:get_inventory();
+	local new_inv_size = inv:get_size("main");
+	for i=1, math.min( inv_size, new_inv_size ) do
+		new_inv:set_stack( "main", i, main_inv[ i ]);
+	end
+
+	-- if the new chest has fewer slots than the old one had...
+	if( new_inv_size < inv_size ) then
+		-- try to put the inventory into the new chest anyway (there
+		-- might be free slots or stacks that can take a bit more)
+		for i=new_inv_size+1, inv_size do
+			-- try to find free space elsewhere in the chest
+			if( new_inv:room_for_item(         "main", main_inv[ i ])) then
+				new_inv:add_item(          "main", main_inv[ i ]);
+			-- ..or in the player's inventory
+			elseif( player_inv:room_for_item( "main", main_inv[ i ])) then
+				player_inv:add_item(      "main", main_inv[ i ]);
+			-- drop the item above the chest
+			else
+				minetest.add_item({x=pos.x,y=pos.y+1,z=pos.z}, main_inv[i]);
+			end
+		end
+	end
+
+	minetest.chat_send_player( pname, 'Chest changed to '..tostring( minetest.registered_nodes[ new_node_name].description )..
+			' for '..tostring( price_amount )..' '..price_name..'.');
 end
 
 
@@ -459,6 +511,7 @@ minetest.register_node( 'chesttools:shared_chest', {
 		chesttools.on_receive_fields( pos, formname, fields, sender);
 	end,
 
+	-- show chest upgrade formspec
 	on_use = function(itemstack, user, pointed_thing)
 		if( user == nil or pointed_thing == nil or pointed_thing.type ~= 'node') then
 			return nil;
@@ -472,35 +525,45 @@ minetest.register_node( 'chesttools:shared_chest', {
 			return nil;
 		end
 
-		if(    node.name=='default:chest' 
-		    or node.name=='default:chest_locked' 
-		    or node.name=='chesttools:shared_chest') then 
+		local formspec = "label[2,0.4;Change chest type:]"..
+				 "field[20,20;0.1,0.1;pos2str;Pos;"..minetest.pos_to_string( pos ).."]"..
+				 "button_exit[2,6.0;1.5,0.5;abort;Abort]";
 
-			local formspec = "size[8,4]"..
-					 "label[2,0.4;Change chest type:]"..
-					 "field[20,20;0.1,0.1;pos2str;Pos;"..minetest.pos_to_string( pos ).."]"..
-					 "button_exit[2,3.5;1.5,0.5;abort;Abort]";
-			if( node.name ~= 'default:chest' ) then
-				formspec = formspec..'item_image_button[1,1;1.5,1.5;default:chest;normal;]'..
-					   'button_exit[1,2.5;1.5,0.5;normal;normal]';
-			else
-				formspec = formspec..'item_image[1,1;1.5,1.5;default:chest]'..
-					   'label[1,2.5;normal]';
+		local can_be_upgraded = false;
+		local offset = 0.5;
+		local row_offset = 0;
+		for nr, update_data in ipairs( chesttools.update_price ) do
+			local link = tostring(update_data[4]);
+			local chest_node_name = update_data[1];
+			-- only offer possible updates
+			if( minetest.registered_nodes[ chest_node_name ]) then
+				if( node.name ~= chest_node_name ) then
+					formspec = formspec..'item_image_button['..tostring(offset)..','..
+								tostring(1+row_offset)..';1.5,1.5;'..
+								chest_node_name..';'..link..';]'..
+							'button_exit['..tostring(offset)..','..
+								tostring(2.5+row_offset)..';1.5,0.5;'..
+								link..';'..link..']';
+				else
+					can_be_upgraded = true;
+					formspec = formspec..'item_image['..tostring(offset)..','..
+								tostring(1+row_offset)..';1.5,1.5;'..
+								chest_node_name..']'..
+							'label['..tostring(offset)..','..
+								tostring(2.5+row_offset)..';'..link..']';
+				end
+				offset = offset + 2;
+				if( offset >= 15.5 ) then
+					row_offset = 2.5;
+					offset = 0.5;
+				end
 			end
-			if( node.name ~= 'default:chest_locked' ) then
-				formspec = formspec..'item_image_button[3,1;1.5,1.5;default:chest_locked;locked;]'..
-					   'button_exit[3,2.5;1.5,0.5;locked;locked]';
-			else
-				formspec = formspec..'item_image[3,1;1.5,1.5;default:chest_locked]'..
-					   'label[3,2.5;locked]';
-			end
-			if( node.name ~= 'chesttools:shared_chest' ) then
-				formspec = formspec..'item_image_button[5,1;1.5,1.5;chesttools:shared_chest;shared;]'..
-					   'button_exit[5,2.5;1.5,0.5;shared;shared]';
-			else
-				formspec = formspec..'item_image[5,1;1.5,1.5;chesttools:shared_chest]'..
-					   'label[5,2.5;shared]';
-			end
+		end
+		offset = 16;
+		-- make the formspec wide enough to show all chests centered
+		formspec = 'size['..tostring(offset)..',6.5]'..formspec;
+		-- only show the formspec if it really is a chest that can be updated
+		if( can_be_upgraded ) then
 			minetest.show_formspec( name, "chesttools:update", formspec );	
 		end
 		return nil;
