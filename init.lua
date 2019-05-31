@@ -219,7 +219,9 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	if(     fields[ 'main'] or selected=='main' or fields['set_chestname']) then
 		bag_nr = 0;
 		formspec = formspec..
-			"list[current_player;main;0.5,5.5;8,4;]";
+			"list[current_player;main;0.5,5.5;8,4;]"..
+			"listring[current_name;main]"..
+			"listring[current_player;main]";
 		bm = "label[0.0,4.4;Main]";
 		selected = 'main';
 
@@ -228,7 +230,9 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		formspec = formspec..
 			"label[0,5.5;Crafting]"..
 			"list[current_player;craftpreview;6.5,6.5;1,1;]"..
-			"list[current_player;craft;2.5,6.5;3,3;]";
+			"list[current_player;craft;2.5,6.5;3,3;]"..
+			"listring[current_name;main]"..
+			"listring[current_player;craft]";
 		bc = "label[1.0,4.4;Craft]";
 		selected = 'craft';
 
@@ -261,8 +265,10 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 			local slots = 4*8;
 			if( slots and slots>0 ) then -- no bag present?
 				formspec = formspec..
-					"list[current_player;bag"..tostring(bag_nr).."contents;0.5,6.5;8,"..tostring(slots/8)..";]";
-			end
+					"list[current_player;bag"..tostring(bag_nr).."contents;0.5,6.5;8,"..tostring(slots/8)..";]"..
+					"listring[current_name;main]"..
+					"listring[current_player;bag"..bag_nr.."contents]";
+      end
 		end
 	end
 
@@ -359,7 +365,6 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	else
 		meta:set_string("infotext", "Chest")
 	end
-
 	-- copy the old inventory
 	local inv = meta:get_inventory();
 	local main_inv = {};
@@ -450,7 +455,9 @@ minetest.register_node( 'chesttools:shared_chest', {
 		local inv = meta:get_inventory()
 		inv:set_size("main", 8*4)
 		meta:set_string("formspec", chesttools.formspec..
-					"list[current_player;main;0.5,5.5;8,4;]");
+					"list[current_player;main;0.5,5.5;8,4;]"..
+					"listring[current_name;main]"..
+					"listring[current_player;main]");
 	end,
 
 	can_dig = function(pos,player)
