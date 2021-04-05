@@ -116,6 +116,9 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 
 	local meta = minetest.get_meta( pos );
 	local chestname = meta:get_string( 'chestname' );
+	local spos = pos.x .. "," .. pos.y .. "," .. pos.z
+	chesttools.formspec = chesttools.formspec ..
+			"listring[nodemeta:" .. spos .. ";main]"
 	if( fields.set_chestname and fields.chestname ) then
 		chestname = tostring( fields.chestname );
 		meta:set_string( 'chestname', chestname );
@@ -133,7 +136,7 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 			"button[7.0,4.5;0.5,0.5;drop_all;DA]"..
 			"button[7.5,4.5;0.5,0.5;take_all;TA]"..
 			"button[8.0,4.5;0.5,0.5;swap_all;SA]"..
-			"button[8.5,4.5;0.5,0.5;filter_all;FA]";
+			"button[8.5,4.5;0.5,0.5;filter_all;FA]"
 	local bm = "button[0.0,4.5;1,0.5;main;Main]";
 	local bc = "button[1.0,4.5;1,0.5;craft;Craft]";
 	local b1 = "button[2.0,4.5;1,0.5;bag1;Bag 1]";
@@ -219,7 +222,9 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	if(     fields[ 'main'] or selected=='main' or fields['set_chestname']) then
 		bag_nr = 0;
 		formspec = formspec..
-			"list[current_player;main;0.5,5.5;8,4;]";
+			"list[current_player;main;0.5,5.5;8,4;]"..
+			"listring[nodemeta:" .. spos .. ";main]"..
+			"listring[current_player;main]"
 		bm = "label[0.0,4.4;Main]";
 		selected = 'main';
 
@@ -228,7 +233,9 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		formspec = formspec..
 			"label[0,5.5;Crafting]"..
 			"list[current_player;craftpreview;6.5,6.5;1,1;]"..
-			"list[current_player;craft;2.5,6.5;3,3;]";
+			"list[current_player;craft;2.5,6.5;3,3;]"..
+			"listring[nodemeta:" .. spos .. ";main]"..
+			"listring[current_player;craft]"
 		bc = "label[1.0,4.4;Craft]";
 		selected = 'craft';
 
@@ -258,10 +265,16 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 			local pname_esc = minetest.formspec_escape(player:get_player_name());
 			formspec = formspec.."list[detached:"..pname_esc.."_bags;bag"..
 				   tostring(bag_nr)..";1.5,5.5;1,1;]";
+			local bag = minetest.get_inventory({type="detached", name=pname_esc.."_bags"},"bag"..tostring(bag_nr))
 			local slots = 4*8;
-			if( slots and slots>0 ) then -- no bag present?
+			if( bag and not(bag:get_stack("bag"..tostring(bag_nr),1):is_empty())) then -- no bag present?
 				formspec = formspec..
-					"list[current_player;bag"..tostring(bag_nr).."contents;0.5,6.5;8,"..tostring(slots/8)..";]";
+					"list[current_player;bag"..tostring(bag_nr).."contents;0.5,6.5;8,"..tostring(slots/8)..";]"..
+					"listring[nodemeta:" .. spos .. ";main]"..
+					"listring[current_player;bag"..tostring(bag_nr).."contents]"
+			else
+				formspec = formspec..
+					"label[0.5,6.5;You have no bag in this slot.]"
 			end
 		end
 	end
@@ -366,7 +379,7 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	local inv_size = inv:get_size("main");
 	for i=1, inv_size do
 		main_inv[ i ] = inv:get_stack( "main", i);
-		print("Found: "..tostring( main_inv[ i ]:get_name()));
+		-- print("Found: "..tostring( main_inv[ i ]:get_name()));
 	end
 
 	-- actually change and initialize the new chest
@@ -413,8 +426,10 @@ chesttools.form_input_handler = function( player, formname, fields)
 		end
 		if(     formname == "chesttools:shared_chest") then
 			chesttools.on_receive_fields(pos, formname, fields, player);
+			return true; -- this function was responsible for handling the input
 		elseif( formname == "chesttools:update") then
 			chesttools.update_chest(     pos, formname, fields, player);
+			return true; -- this function was responsible for handling the input
 		end
 		
 		return;
