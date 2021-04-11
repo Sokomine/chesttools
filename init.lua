@@ -117,15 +117,15 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	local meta = minetest.get_meta( pos );
 	local chestname = meta:get_string( 'chestname' );
 	local spos = pos.x .. "," .. pos.y .. "," .. pos.z
-	chesttools.formspec = chesttools.formspec ..
-			"listring[nodemeta:" .. spos .. ";main]"
 	if( fields.set_chestname and fields.chestname ) then
 		chestname = tostring( fields.chestname );
 		meta:set_string( 'chestname', chestname );
 		meta:set_string("infotext", "\""..chestname.."\" Chest (owned by "..meta:get_string("owner")..")")
 		-- update the normal formspec
 		meta:set_string("formspec", chesttools.formspec..
-				    "field[1.8,10.0;6,0.5;chestname;;"..chestname.."]");
+			"listring[current_name;main]"..
+			"listring[current_player;main]"..
+			"field[1.8,10.0;6,0.5;chestname;;"..chestname.."]");
 	end
 
 	local formspec = "size[9,10]"..
@@ -465,7 +465,8 @@ minetest.register_node( 'chesttools:shared_chest', {
 		local inv = meta:get_inventory()
 		inv:set_size("main", 8*4)
 		meta:set_string("formspec", chesttools.formspec..
-					"list[current_player;main;0.5,5.5;8,4;]");
+			"listring[current_name;main]"..
+			"listring[current_player;main]")
 	end,
 
 	can_dig = function(pos,player)
