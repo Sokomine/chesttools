@@ -90,7 +90,7 @@ end
 
 
 chesttools.may_use = function( pos, player )
-	if( not( player )) then
+	if not (pos and player and player.is_player and player:is_player() and not player.is_fake_player) then
 		return false;
 	end
 	local name = player:get_player_name();
