@@ -33,8 +33,10 @@ chesttools.update_price = {
 
 chesttools.chest_add = {};
 chesttools.chest_add.tiles  = {
-		"chesttools_blue_chest_top.png", "chesttools_blue_chest_top.png", "chesttools_blue_chest_side.png",
-		"chesttools_blue_chest_side.png", "chesttools_blue_chest_side.png", "chesttools_blue_chest_lock.png"};
+--		"chesttools_blue_chest_top.png", "chesttools_blue_chest_top.png", "chesttools_blue_chest_side.png",
+--		"chesttools_blue_chest_side.png", "chesttools_blue_chest_side.png", "chesttools_blue_chest_lock.png"};
+		"chesttools_white_chest_top.png", "chesttools_white_chest_top.png", "chesttools_white_chest_side.png",
+		"chesttools_white_chest_side.png", "chesttools_white_chest_side.png", "chesttools_white_chest_lock.png"};
 chesttools.chest_add.groups = {snappy=2,choppy=2,oddly_breakable_by_hand=2};
 chesttools.chest_add.tube   = {};
 
@@ -69,9 +71,11 @@ end
 
 chesttools.formspec = "size[9,10]"..
 			"list[current_name;main;0.5,0.3;8,4;]"..
-			"label[0.0,9.7;Title/Content:]"..
+			"label[0.5,9.7;Name:]"..
 			"field[1.8,10.0;6,0.5;chestname;;]"..
-			"button[7.5,9.7;1,0.5;set_chestname;Store]"..
+			"button[7.5,9.7;1,0.5;set_chestname;Store\nName]"..
+--			"button[8.6,9.7;0.5,0.5;change_color;C]"..
+		"image_button[8.4,9.7;0.5,0.5;chesttools_palette.png;change_color;]"..
 			"label[0.0,4.4;Main]"..
 			"button[1.0,4.5;1,0.5;craft;Craft]"..
 			"button[7.0,4.5;0.5,0.5;drop_all;DA]"..
@@ -129,9 +133,11 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	end
 
 	local formspec = "size[9,10]"..
-			"label[0.0,9.7;Title/Content:]"..
+			"label[0.5,9.7;Name:]"..
 			"field[1.8,10.0;6,0.5;chestname;;"..tostring( chestname or "unconfigured").."]"..
-			"button[7.5,9.7;1,0.5;set_chestname;Store]"..
+			"button[7.5,9.7;1,0.5;set_chestname;Store\nName]"..
+--			"button[8.6,9.7;0.5,0.5;change_color;C]"..
+		"image_button[8.4,9.7;0.5,0.5;chesttools_palette.png;change_color;]"..
 			"list[current_name;main;0.5,0.3;8,4;]"..
 			"button[7.0,4.5;0.5,0.5;drop_all;DA]"..
 			"button[7.5,4.5;0.5,0.5;take_all;TA]"..
@@ -143,6 +149,11 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	local b2 = "button[3.0,4.5;1,0.5;bag2;Bag 2]";
 	local b3 = "button[4.0,4.5;1,0.5;bag3;Bag 3]";
 	local b4 = "button[5.0,4.5;1,0.5;bag4;Bag 4]";
+
+	if( fields.change_color ) then
+		local node = minetest.get_node( pos )
+		minetest.swap_node(pos, {name=node.name, param2=(node.param2 + 32)})
+	end
 
 	local selected = '';
 	if( fields.drop_all or fields.take_all or fields.swap_all or fields.filter_all ) then
@@ -447,7 +458,8 @@ minetest.register_node( 'chesttools:shared_chest', {
 	tiles  = chesttools.chest_add.tiles,
         groups = chesttools.chest_add.groups,
 	tube   = chesttools.chest_add.tube,
-        paramtype2 = "facedir",
+        paramtype2 = "colorfacedir",
+	palette = "chesttools_palette.png",
         legacy_facedir_simple = true,
         is_ground_content = false,
         sounds = default.node_sound_wood_defaults(),
@@ -472,7 +484,7 @@ minetest.register_node( 'chesttools:shared_chest', {
 	can_dig = function(pos,player)
 		local meta = minetest.get_meta(pos);
 		local inv = meta:get_inventory()
-		return inv:is_empty("main") and player:get_player_name() == meta:get_string('owner');
+		return inv:is_empty("main") and player and player:is_player() and player:get_player_name() == meta:get_string('owner');
 	end,
 
 	allow_metadata_inventory_move = function(pos, from_list, from_index,
