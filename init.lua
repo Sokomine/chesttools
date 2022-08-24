@@ -46,12 +46,12 @@ chesttools.chest_add.tube   = {};
 -- taken from pipeworks/compat.lua
 if( minetest.get_modpath( 'pipeworks' )) then
 	chesttools.chest_add.tiles = {
-		"chesttools_blue_chest_top.png^pipeworks_tube_connection_wooden.png",
-		"chesttools_blue_chest_top.png^pipeworks_tube_connection_wooden.png",
-		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
-		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
-		"chesttools_blue_chest_side.png^pipeworks_tube_connection_wooden.png",
-		"chesttools_blue_chest_lock.png"};
+		chesttools.chest_add.tiles[1].."^pipeworks_tube_connection_wooden.png",
+		chesttools.chest_add.tiles[1].."^pipeworks_tube_connection_wooden.png",
+		chesttools.chest_add.tiles[3].."^pipeworks_tube_connection_wooden.png",
+		chesttools.chest_add.tiles[3].."^pipeworks_tube_connection_wooden.png",
+		chesttools.chest_add.tiles[3].."^pipeworks_tube_connection_wooden.png",
+		chesttools.chest_add.tiles[6]};
 	chesttools.chest_add.groups = {snappy=2,choppy=2,oddly_breakable_by_hand=2,
 			tubedevice = 1, tubedevice_receiver = 1 };
 	chesttools.chest_add.tube = {
