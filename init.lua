@@ -18,6 +18,7 @@ chesttools.update_price = {
 	{'default:chest',             'default:steel_ingot', 0, 'normal', 1, 'nothing'},
 	{'default:chest_locked',      'default:steel_ingot', 1, 'locked', 2, 'steel ingot'},
 	{'chesttools:shared_chest',   'default:steel_ingot', 2, 'shared', 3, 'steel ingot(s)'},
+	{'chesttools:shared_chest_wall',   'default:steel_ingot', 2, 'shared', 3, 'steel ingot(s)'},
 	{'locks:shared_locked_chest', 'default:steel_ingot', 3, 'locks',  4, 'steel ingot(s)'},
 	{'technic:iron_chest',          'technic:iron_chest',          1, 'iron',          5, 'Iron chest'},
 	{'technic:iron_locked_chest',   'technic:iron_locked_chest',   1, 'iron_locked',   6, 'Iron locked chest'},
@@ -118,10 +119,25 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		return;
 	end
 
+	if( fields.change_color ) then
+		local node = minetest.get_node( pos )
+		local add = 0
+		if(node and node.name and minetest.registered_nodes[node.name]) then
+			local def = minetest.registered_nodes[node.name]
+			if(def and def.paramtype2 == "colorfacedir") then
+				add = 32
+			elseif(def and def.paramtype2 == "colorwallmounted") then
+				add = 8
+			end
+			minetest.swap_node(pos, {name=node.name, param2=(node.param2 + add) % 256})
+			return
+		end
+	end
+
 	local meta = minetest.get_meta( pos );
 	local chestname = meta:get_string( 'chestname' );
 	local spos = pos.x .. "," .. pos.y .. "," .. pos.z
-	if( fields.set_chestname and fields.chestname ) then
+	if( fields.set_chestname and fields.chestname and fields.chestname ~= chestname) then
 		chestname = tostring( fields.chestname );
 		meta:set_string( 'chestname', chestname );
 		meta:set_string("infotext", "\""..chestname.."\" Chest (owned by "..meta:get_string("owner")..")")
@@ -150,10 +166,6 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	local b3 = "button[4.0,4.5;1,0.5;bag3;Bag 3]";
 	local b4 = "button[5.0,4.5;1,0.5;bag4;Bag 4]";
 
-	if( fields.change_color ) then
-		local node = minetest.get_node( pos )
-		minetest.swap_node(pos, {name=node.name, param2=(node.param2 + 32)})
-	end
 
 	local selected = '';
 	if( fields.drop_all or fields.take_all or fields.swap_all or fields.filter_all ) then
@@ -452,14 +464,15 @@ end
 minetest.register_on_player_receive_fields( chesttools.form_input_handler );
 
 
-minetest.register_node( 'chesttools:shared_chest', {
-	description = 'Shared chest which can be used by all who can build at that spot',
-	name   = 'shared chest',
-	tiles  = chesttools.chest_add.tiles,
+chesttools.register_chest = function(node_name, desc, name, paramtype2, palette, tiles)
+     minetest.register_node( node_name, {
+	description = desc,
+	name   = name,
+	tiles  = tiles,
         groups = chesttools.chest_add.groups,
 	tube   = chesttools.chest_add.tube,
-        paramtype2 = "colorfacedir",
-	palette = "chesttools_palette.png",
+        paramtype2 = paramtype2,
+	palette = palette,
         legacy_facedir_simple = true,
         is_ground_content = false,
         sounds = default.node_sound_wood_defaults(),
@@ -590,9 +603,38 @@ minetest.register_node( 'chesttools:shared_chest', {
 		return nil;
 	end,
 })
+end
+
+chesttools.register_chest("chesttools:shared_chest",
+	'Shared chest which can be used by all who can build at that spot',
+	'shared chest',
+	'colorfacedir',
+	'chesttools_palette.png',
+	chesttools.chest_add.tiles)
 
 minetest.register_craft({
 	output = 'chesttools:shared_chest',
 	type   = 'shapeless',
 	recipe = { 'default:steel_ingot', 'default:chest_locked' },
 })
+
+chesttools.register_chest("chesttools:shared_chest_wall",
+	'Shared chest which can be used by all who can build at that spot (wallmounted)',
+	'shared chest (wallmounted)',
+	'colorwallmounted',
+	'chesttools_palette_wallmounted.png',
+	{chesttools.chest_add.tiles[6],
+	 chesttools.chest_add.tiles[3].."^[transformR180",
+	 chesttools.chest_add.tiles[3].."^[transformR270",
+	 chesttools.chest_add.tiles[3].."^[transformR90",
+	 chesttools.chest_add.tiles[1].."^[transformR90",
+	 chesttools.chest_add.tiles[1].."^[transformR90",
+	 chesttools.chest_add.tiles[1],
+	})
+
+minetest.register_craft({
+	output = 'chesttools:shared_chest_wall',
+	type   = 'shapeless',
+	recipe = { 'default:steel_ingot', 'chesttools:shared_chest' },
+})
+
