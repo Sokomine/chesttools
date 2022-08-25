@@ -95,11 +95,14 @@ end
 
 
 chesttools.may_use = function( pos, player )
-	if( not( player )) then
+	if( not( player ) or not(pos) or not(pos.x)) then
 		return false;
 	end
 	local name = player:get_player_name();
 	local meta = minetest.get_meta( pos );
+	if(not(meta)) then
+		return false
+	end
 	local owner = meta:get_string( 'owner' )
 	-- the owner can access the chest
 	if( owner == name or owner == "" ) then
