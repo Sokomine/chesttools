@@ -44,7 +44,8 @@ chesttools.chest_add.tube   = {};
 
 -- additional/changed definitions for pipeworks;
 -- taken from pipeworks/compat.lua
-if( minetest.get_modpath( 'pipeworks' )) then
+local has_pipeworks = minetest.get_modpath( 'pipeworks' )
+if( has_pipeworks ) then
 	chesttools.chest_add.tiles = {
 		chesttools.chest_add.tiles[1].."^pipeworks_tube_connection_wooden.png",
 		chesttools.chest_add.tiles[1].."^pipeworks_tube_connection_wooden.png",
@@ -481,6 +482,9 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 		local meta = minetest.get_meta(pos)
 		meta:set_string("owner", placer:get_player_name() or "")
 		meta:set_string("infotext", "Shared Chest (owned by "..meta:get_string("owner")..")")
+		if has_pipeworks then
+			pipeworks.after_place(pos)
+		end
 	end,
 
 	on_construct = function(pos)
