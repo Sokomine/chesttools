@@ -90,7 +90,7 @@ end
 
 
 chesttools.may_use = function( pos, player )
-	if( not( player )) then
+	if not (pos and player and player.is_player and player:is_player() and not player.is_fake_player) then
 		return false;
 	end
 	local name = player:get_player_name();
@@ -164,7 +164,7 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 			selected = 'main';
 		end
 		local inv_list = 'main';
-		if(     selected == 'main' ) then		
+		if(     selected == 'main' ) then
 			inv_list = 'main';
 		elseif( selected == 'craft' ) then
 			inv_list = 'craft';
@@ -431,7 +431,7 @@ chesttools.form_input_handler = function( player, formname, fields)
 			chesttools.update_chest(     pos, formname, fields, player);
 			return true; -- this function was responsible for handling the input
 		end
-		
+
 		return;
 	end
 end
@@ -469,10 +469,11 @@ minetest.register_node( 'chesttools:shared_chest', {
 			"listring[current_player;main]")
 	end,
 
-	can_dig = function(pos,player)
-		local meta = minetest.get_meta(pos);
+	can_dig = function(pos, player)
+		local player_name = (player and player.get_player_name and player:get_player_name()) or ""
+		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
-		return inv:is_empty("main") and player:get_player_name() == meta:get_string('owner');
+		return player_name and inv:is_empty("main") and not minetest.is_protected(pos, player_name)
 	end,
 
 	allow_metadata_inventory_move = function(pos, from_list, from_index,
@@ -573,7 +574,7 @@ minetest.register_node( 'chesttools:shared_chest', {
 		formspec = 'size['..tostring(offset)..',6.5]'..formspec;
 		-- only show the formspec if it really is a chest that can be updated
 		if( can_be_upgraded ) then
-			minetest.show_formspec( name, "chesttools:update", formspec );	
+			minetest.show_formspec( name, "chesttools:update", formspec );
 		end
 		return nil;
 	end,
