@@ -388,17 +388,6 @@ chesttools.update_chest = function(pos, formname, fields, player)
 		player_inv:add_item(    'main', old_price_item..' '..tostring(old_price_amount));
 	end
 
-	-- set the owner field
-	meta:set_string( 'owner', pname );
-
-	if( fields.locked ) then
-		meta:set_string("infotext", "Locked Chest (owned by "..meta:get_string("owner")..")")
-	elseif( fields.shared ) then
-		meta:set_string("infotext", "Shared Chest (owned by "..meta:get_string("owner")..")")
-	else
-		meta:set_string("infotext", "Chest")
-	end
-
 	-- copy the old inventory
 	local inv = meta:get_inventory();
 	local main_inv = {};
@@ -412,6 +401,14 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	minetest.set_node( pos, { name = new_node_name, param2 = node.param2 });
 	-- make sure the player owns the new chest
 	meta:set_string("owner", pname);
+
+	if( fields.locked ) then
+		meta:set_string("infotext", "Locked Chest (owned by "..pname..")")
+	elseif( fields.shared ) then
+		meta:set_string("infotext", "Shared Chest (owned by "..pname..")")
+	else
+		meta:set_string("infotext", "Chest")
+	end
 
 	-- put the inventory back
 	local new_inv      = meta:get_inventory();
