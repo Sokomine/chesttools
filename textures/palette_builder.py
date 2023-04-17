@@ -68,7 +68,7 @@ for hue in hues:
     i = i + 1
     img.putpixel((i, 0), ImageColor.getrgb(f'hsv({offset_hue},100%,50%)'))
     i = i + 1
-    img.putpixel((i, 0), ImageColor.getrgb(f'hsv({offset_hue},66.6%,66.6%)'))
+    img.putpixel((i, 0), ImageColor.getrgb(f'hsv({offset_hue},70.7%,70.7%)'))
     i = i + 1
     img.putpixel((i, 0), ImageColor.getrgb(f'hsv({offset_hue},50%,100%)'))
     i = i + 1

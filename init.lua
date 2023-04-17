@@ -84,22 +84,25 @@ if has_pipeworks then
 	}
 end
 
+-- to build the default (node metadata) formspec, only `pos` is needed.
+-- when showing player inventories other than "main", both "player" and "selected_inventory" must be provided
 function chesttools.build_chest_formspec(pos, player, selected_inventory)
 	local node = minetest.get_node(pos)
 	local item = ItemStack(node.name)
 	local item_meta = item:get_meta()
-	item_meta:set_int("palette_index", math.floor(node.param2 / 4))
+	item_meta:set_int("palette_index", node.param2)
 	local itemstring = item:to_string()
 	local node_meta = minetest.get_meta(pos)
 	local chestname = node_meta:get_string("chestname")
 	selected_inventory = selected_inventory or "main"
-	local parts = {
+	-- the parts that are common
+	local fs_parts = {
 		"size[9.5,10]",
 		"list[context;main;0.5,0.3;8,4;]",
 		"label[0.5,9.7;Name:]",
 		f("field[1.8,10.0;6,0.5;chestname;;%s]", F(chestname) or "unconfigured"),
 		"button[7.5,9.7;1,0.5;set_chestname;Store\nName]",
-		f("item_image[8.5,8.2;1,1;%s]", F(itemstring)),
+		f("item_image_button[8.5,8.2;1,1;%s;change_color;]", F(itemstring)),
 		"image_button[8.5,9.2;1,1;chesttools_palette.png;change_color;]",
 		"button[7.0,4.5;0.5,0.5;drop_all;DA]",
 		"button[7.5,4.5;0.5,0.5;take_all;TA]",
@@ -107,30 +110,29 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 		"button[8.5,4.5;0.5,0.5;filter_all;FA]",
 		"listring[context;main]",
 	}
-	minetest.chat_send_all(F(itemstring))
 	if selected_inventory == "main" then
-		parts[#parts + 1] = "label[0.0,4.4;Main]"
-		parts[#parts + 1] = "list[current_player;main;0.5,5.5;8,4;]"
-		parts[#parts + 1] = "listring[current_player;main]"
+		fs_parts[#fs_parts + 1] = "label[0.0,4.4;Main]"
+		fs_parts[#fs_parts + 1] = "list[current_player;main;0.5,5.5;8,4;]"
+		fs_parts[#fs_parts + 1] = "listring[current_player;main]"
 	else
-		parts[#parts + 1] = "button[0.0,4.5;1,0.5;main;Main]"
+		fs_parts[#fs_parts + 1] = "button[0.0,4.5;1,0.5;main;Main]"
 	end
 	if selected_inventory == "craft" then
-		parts[#parts + 1] = "label[1.0,4.4;Craft]"
-		parts[#parts + 1] = "label[0,5.5;Crafting]"
-		parts[#parts + 1] = "list[current_player;craftpreview;6.5,6.5;1,1;]"
-		parts[#parts + 1] = "list[current_player;craft;2.5,6.5;3,3;]"
-		parts[#parts + 1] = "listring[current_player;craft]"
-		parts[#parts + 1] = "listring[context;main]"
-		parts[#parts + 1] = "listring[current_player;craftpreview]"
+		fs_parts[#fs_parts + 1] = "label[1.0,4.4;Craft]"
+		fs_parts[#fs_parts + 1] = "label[0,5.5;Crafting]"
+		fs_parts[#fs_parts + 1] = "list[current_player;craftpreview;6.5,6.5;1,1;]"
+		fs_parts[#fs_parts + 1] = "list[current_player;craft;2.5,6.5;3,3;]"
+		fs_parts[#fs_parts + 1] = "listring[current_player;craft]"
+		fs_parts[#fs_parts + 1] = "listring[context;main]"
+		fs_parts[#fs_parts + 1] = "listring[current_player;craftpreview]"
 	else
-		parts[#parts + 1] = "button[1.0,4.5;1,0.5;craft;Craft]"
+		fs_parts[#fs_parts + 1] = "button[1.0,4.5;1,0.5;craft;Craft]"
 	end
 
 	if minetest.get_modpath("unified_inventory") then
 		if player and selected_inventory == "bag1" then
-			parts[#parts + 1] = "label[2.0,4.4;Bag 1]"
-			parts[#parts + 1] = "label[0.5,5.5;Bag 1]"
+			fs_parts[#fs_parts + 1] = "label[2.0,4.4;Bag 1]"
+			fs_parts[#fs_parts + 1] = "label[0.5,5.5;Bag 1]"
 			local player_name = player:get_player_name()
 			local player_inventory = player:get_inventory()
 			local bags_inv_name = f("%s_bags", player_name)
@@ -138,22 +140,22 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 				type = "detached",
 				name = bags_inv_name
 			})
-			parts[#parts + 1] = f("list[detached:%s;bag1;1.5,5.5;1,1;]", F(bags_inv_name))
+			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag1;1.5,5.5;1,1;]", F(bags_inv_name))
 			local bag_item = bags_inv:get_stack("bag1", 1)
 			if bag_item:is_empty() then
-				parts[#parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
+				fs_parts[#fs_parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
 			else
 				local bag_size = player_inventory:get_size("bag_inv_name")
-				parts[#parts + 1] = f("list[current_player;bag1contents;0.5,6.5;8,%i;]", bag_size / 8)
-				parts[#parts + 1] = "listring[current_player;bag1contents]"
+				fs_parts[#fs_parts + 1] = f("list[current_player;bag1contents;0.5,6.5;8,%i;]", bag_size / 8)
+				fs_parts[#fs_parts + 1] = "listring[current_player;bag1contents]"
 			end
 		else
-			parts[#parts + 1] = "button[2.0,4.5;1,0.5;bag1;Bag 1]"
+			fs_parts[#fs_parts + 1] = "button[2.0,4.5;1,0.5;bag1;Bag 1]"
 		end
 
 		if player and selected_inventory == "bag2" then
-			parts[#parts + 1] = "label[3.0,4.4;Bag 2]"
-			parts[#parts + 1] = "label[0.5,5.5;Bag 2]"
+			fs_parts[#fs_parts + 1] = "label[3.0,4.4;Bag 2]"
+			fs_parts[#fs_parts + 1] = "label[0.5,5.5;Bag 2]"
 			local player_name = player:get_player_name()
 			local player_inventory = player:get_inventory()
 			local bags_inv_name = f("%s_bags", player_name)
@@ -161,22 +163,22 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 				type = "detached",
 				name = bags_inv_name
 			})
-			parts[#parts + 1] = f("list[detached:%s;bag2;1.5,5.5;1,1;]", F(bags_inv_name))
+			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag2;1.5,5.5;1,1;]", F(bags_inv_name))
 			local bag_item = bags_inv:get_stack("bag2", 1)
 			if bag_item:is_empty() then
-				parts[#parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
+				fs_parts[#fs_parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
 			else
 				local bag_size = player_inventory:get_size("bag_inv_name")
-				parts[#parts + 1] = f("list[current_player;bag2contents;0.5,6.5;8,%i;]", bag_size / 8)
-				parts[#parts + 1] = "listring[current_player;bag2contents]"
+				fs_parts[#fs_parts + 1] = f("list[current_player;bag2contents;0.5,6.5;8,%i;]", bag_size / 8)
+				fs_parts[#fs_parts + 1] = "listring[current_player;bag2contents]"
 			end
 		else
-			parts[#parts + 1] = "button[3.0,4.5;1,0.5;bag2;Bag 2]"
+			fs_parts[#fs_parts + 1] = "button[3.0,4.5;1,0.5;bag2;Bag 2]"
 		end
 
 		if player and selected_inventory == "bag3" then
-			parts[#parts + 1] = "label[4.0,4.4;Bag 3]"
-			parts[#parts + 1] = "label[0.5,5.5;Bag 3]"
+			fs_parts[#fs_parts + 1] = "label[4.0,4.4;Bag 3]"
+			fs_parts[#fs_parts + 1] = "label[0.5,5.5;Bag 3]"
 			local player_name = player:get_player_name()
 			local player_inventory = player:get_inventory()
 			local bags_inv_name = f("%s_bags", player_name)
@@ -184,22 +186,22 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 				type = "detached",
 				name = bags_inv_name
 			})
-			parts[#parts + 1] = f("list[detached:%s;bag3;1.5,5.5;1,1;]", F(bags_inv_name))
+			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag3;1.5,5.5;1,1;]", F(bags_inv_name))
 			local bag_item = bags_inv:get_stack("bag3", 1)
 			if bag_item:is_empty() then
-				parts[#parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
+				fs_parts[#fs_parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
 			else
 				local bag_size = player_inventory:get_size("bag_inv_name")
-				parts[#parts + 1] = f("list[current_player;bag3contents;0.5,6.5;8,%i;]", bag_size / 8)
-				parts[#parts + 1] = "listring[current_player;bag3contents]"
+				fs_parts[#fs_parts + 1] = f("list[current_player;bag3contents;0.5,6.5;8,%i;]", bag_size / 8)
+				fs_parts[#fs_parts + 1] = "listring[current_player;bag3contents]"
 			end
 		else
-			parts[#parts + 1] = "button[4.0,4.5;1,0.5;bag3;Bag 3]"
+			fs_parts[#fs_parts + 1] = "button[4.0,4.5;1,0.5;bag3;Bag 3]"
 		end
 
 		if player and selected_inventory == "bag4" then
-			parts[#parts + 1] = "label[5.0,4.4;Bag 4]"
-			parts[#parts + 1] = "label[0.5,5.5;Bag 4]"
+			fs_parts[#fs_parts + 1] = "label[5.0,4.4;Bag 4]"
+			fs_parts[#fs_parts + 1] = "label[0.5,5.5;Bag 4]"
 			local player_name = player:get_player_name()
 			local player_inventory = player:get_inventory()
 			local bags_inv_name = f("%s_bags", player_name)
@@ -207,21 +209,21 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 				type = "detached",
 				name = bags_inv_name
 			})
-			parts[#parts + 1] = f("list[detached:%s;bag4;1.5,5.5;1,1;]", F(bags_inv_name))
+			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag4;1.5,5.5;1,1;]", F(bags_inv_name))
 			local bag_item = bags_inv:get_stack("bag4", 1)
 			if bag_item:is_empty() then
-				parts[#parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
+				fs_parts[#fs_parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
 			else
 				local bag_size = player_inventory:get_size("bag_inv_name")
-				parts[#parts + 1] = f("list[current_player;bag4contents;0.5,6.5;8,%i;]", bag_size / 8)
-				parts[#parts + 1] = "listring[current_player;bag4contents]"
+				fs_parts[#fs_parts + 1] = f("list[current_player;bag4contents;0.5,6.5;8,%i;]", bag_size / 8)
+				fs_parts[#fs_parts + 1] = "listring[current_player;bag4contents]"
 			end
 		else
-			parts[#parts + 1] = "button[5.0,4.5;1,0.5;bag4;Bag 4]"
+			fs_parts[#fs_parts + 1] = "button[5.0,4.5;1,0.5;bag4;Bag 4]"
 		end
 	end
 
-	return table.concat(parts, "")
+	return table.concat(fs_parts, "")
 end
 
 chesttools.may_use = function(pos, player)
@@ -729,7 +731,7 @@ chesttools.register_chest(
 	"Shared chest which can be used by all who can build at that spot",
 	"shared chest",
 	"color4dir",
-	"chesttools_palette_4dir.a.png",
+	"chesttools_palette_4dir.b.png",
 	chesttools.chest_add.tiles,
 	chesttools.chest_add.overlay_tiles
 )
@@ -742,3 +744,14 @@ minetest.register_craft({
 
 minetest.register_alias("chesttools:shared_chest_4dir", "chesttools:shared_chest")
 minetest.register_alias("chesttools:shared_chest_wall", "chesttools:shared_chest")
+
+minetest.register_lbm({
+	name = "chesttools:update_chest_formspec",
+	label = "update chest formspec",
+	nodenames = {"chesttools:shared_chest"},
+	run_at_every_load = true,
+	action = function(pos, node, dtime_s)
+		local meta = minetest.get_meta(pos)
+		meta:set_string("formspec", chesttools.build_chest_formspec(pos))
+	end,
+})
