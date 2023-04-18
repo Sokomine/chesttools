@@ -6,6 +6,10 @@
 -- 05.10.14 Fixed bug in protection/access
 local f = string.format
 local F = minetest.formspec_escape
+local S = minetest.get_translator("chesttools")
+local function FS(...)
+	return F(S(...))
+end
 
 chesttools = {}
 
@@ -56,6 +60,13 @@ chesttools.chest_add.overlay_tiles = {
 chesttools.chest_add.groups = { snappy = 2, choppy = 2, oddly_breakable_by_hand = 2 }
 chesttools.chest_add.tube = {}
 
+local colorstep_by_paramtype2 = {
+	color = 1,
+	colorwallmounted = 8,
+	colorfacedir = 32,
+	color4dir = 4,
+}
+
 -- additional/changed definitions for pipeworks;
 -- taken from pipeworks/compat.lua
 local has_pipeworks = minetest.get_modpath("pipeworks")
@@ -89,8 +100,11 @@ end
 function chesttools.build_chest_formspec(pos, player, selected_inventory)
 	local node = minetest.get_node(pos)
 	local item = ItemStack(node.name)
+	local paramtype2 = item:get_definition().paramtype2
+	local colorstep = colorstep_by_paramtype2[paramtype2]
+	local param2 = node.param2
 	local item_meta = item:get_meta()
-	item_meta:set_int("palette_index", node.param2)
+	item_meta:set_int("palette_index", param2)
 	local itemstring = item:to_string()
 	local node_meta = minetest.get_meta(pos)
 	local chestname = node_meta:get_string("chestname")
@@ -101,9 +115,11 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 		"list[context;main;0.5,0.3;8,4;]",
 		"label[0.5,9.7;Name:]",
 		f("field[1.8,10.0;6,0.5;chestname;;%s]", F(chestname) or "unconfigured"),
-		"button[7.5,9.7;1,0.5;set_chestname;Store\nName]",
+		f("button[7.5,9.7;1,0.5;set_chestname;%s]", FS("Store\nName")),
 		f("item_image_button[8.5,8.2;1,1;%s;change_color;]", F(itemstring)),
-		"image_button[8.5,9.2;1,1;chesttools_palette.png;change_color;]",
+		f("label[8.65,9;#%s]", F(tostring(math.floor(param2 / colorstep)))),
+		"button[8.5,9.5;0.5,0.5;previous_color;<]",
+		"button[9.0,9.5;0.5,0.5;next_color;>]",
 		"button[7.0,4.5;0.5,0.5;drop_all;DA]",
 		"button[7.5,4.5;0.5,0.5;take_all;TA]",
 		"button[8.0,4.5;0.5,0.5;swap_all;SA]",
@@ -111,115 +127,107 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 		"listring[context;main]",
 	}
 	if selected_inventory == "main" then
-		fs_parts[#fs_parts + 1] = "label[0.0,4.4;Main]"
+		fs_parts[#fs_parts + 1] = f("label[0.0,4.4;%s]", FS("Main"))
 		fs_parts[#fs_parts + 1] = "list[current_player;main;0.5,5.5;8,4;]"
 		fs_parts[#fs_parts + 1] = "listring[current_player;main]"
 	else
-		fs_parts[#fs_parts + 1] = "button[0.0,4.5;1,0.5;main;Main]"
+		fs_parts[#fs_parts + 1] = f("button[0.0,4.5;1,0.5;main;%s]", FS("Main"))
 	end
 	if selected_inventory == "craft" then
-		fs_parts[#fs_parts + 1] = "label[1.0,4.4;Craft]"
-		fs_parts[#fs_parts + 1] = "label[0,5.5;Crafting]"
+		fs_parts[#fs_parts + 1] = f("label[1.0,4.4;%s]", FS("Craft"))
+		fs_parts[#fs_parts + 1] = f("label[0,5.5;%s]", FS("Crafting"))
 		fs_parts[#fs_parts + 1] = "list[current_player;craftpreview;6.5,6.5;1,1;]"
 		fs_parts[#fs_parts + 1] = "list[current_player;craft;2.5,6.5;3,3;]"
 		fs_parts[#fs_parts + 1] = "listring[current_player;craft]"
 		fs_parts[#fs_parts + 1] = "listring[context;main]"
 		fs_parts[#fs_parts + 1] = "listring[current_player;craftpreview]"
 	else
-		fs_parts[#fs_parts + 1] = "button[1.0,4.5;1,0.5;craft;Craft]"
+		fs_parts[#fs_parts + 1] = f("button[1.0,4.5;1,0.5;craft;%s]", FS("Craft"))
 	end
 
 	if minetest.get_modpath("unified_inventory") then
 		if player and selected_inventory == "bag1" then
-			fs_parts[#fs_parts + 1] = "label[2.0,4.4;Bag 1]"
-			fs_parts[#fs_parts + 1] = "label[0.5,5.5;Bag 1]"
+			fs_parts[#fs_parts + 1] = f("label[2.0,4.4;%s]", FS("Bag 1"))
+			fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", FS("Bag 1"))
 			local player_name = player:get_player_name()
-			local player_inventory = player:get_inventory()
 			local bags_inv_name = f("%s_bags", player_name)
 			local bags_inv = minetest.get_inventory({
 				type = "detached",
-				name = bags_inv_name
+				name = bags_inv_name,
 			})
 			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag1;1.5,5.5;1,1;]", F(bags_inv_name))
 			local bag_item = bags_inv:get_stack("bag1", 1)
 			if bag_item:is_empty() then
-				fs_parts[#fs_parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
+				fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
 			else
-				local bag_size = player_inventory:get_size("bag_inv_name")
-				fs_parts[#fs_parts + 1] = f("list[current_player;bag1contents;0.5,6.5;8,%i;]", bag_size / 8)
+				fs_parts[#fs_parts + 1] = "list[current_player;bag1contents;0.5,6.5;8,4;]"
 				fs_parts[#fs_parts + 1] = "listring[current_player;bag1contents]"
 			end
 		else
-			fs_parts[#fs_parts + 1] = "button[2.0,4.5;1,0.5;bag1;Bag 1]"
+			fs_parts[#fs_parts + 1] = f("button[2.0,4.5;1,0.5;bag1;%s]", FS("Bag 1"))
 		end
 
 		if player and selected_inventory == "bag2" then
-			fs_parts[#fs_parts + 1] = "label[3.0,4.4;Bag 2]"
-			fs_parts[#fs_parts + 1] = "label[0.5,5.5;Bag 2]"
+			fs_parts[#fs_parts + 1] = f("label[3.0,4.4;%s]", FS("Bag 2"))
+			fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", FS("Bag 2"))
 			local player_name = player:get_player_name()
-			local player_inventory = player:get_inventory()
 			local bags_inv_name = f("%s_bags", player_name)
 			local bags_inv = minetest.get_inventory({
 				type = "detached",
-				name = bags_inv_name
+				name = bags_inv_name,
 			})
 			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag2;1.5,5.5;1,1;]", F(bags_inv_name))
 			local bag_item = bags_inv:get_stack("bag2", 1)
 			if bag_item:is_empty() then
-				fs_parts[#fs_parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
+				fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
 			else
-				local bag_size = player_inventory:get_size("bag_inv_name")
-				fs_parts[#fs_parts + 1] = f("list[current_player;bag2contents;0.5,6.5;8,%i;]", bag_size / 8)
+				fs_parts[#fs_parts + 1] = "list[current_player;bag2contents;0.5,6.5;8,4;]"
 				fs_parts[#fs_parts + 1] = "listring[current_player;bag2contents]"
 			end
 		else
-			fs_parts[#fs_parts + 1] = "button[3.0,4.5;1,0.5;bag2;Bag 2]"
+			fs_parts[#fs_parts + 1] = f("button[3.0,4.5;1,0.5;bag2;%s]", FS("Bag 2"))
 		end
 
 		if player and selected_inventory == "bag3" then
-			fs_parts[#fs_parts + 1] = "label[4.0,4.4;Bag 3]"
-			fs_parts[#fs_parts + 1] = "label[0.5,5.5;Bag 3]"
+			fs_parts[#fs_parts + 1] = f("label[4.0,4.4;%s]", FS("Bag 3"))
+			fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", FS("Bag 3"))
 			local player_name = player:get_player_name()
-			local player_inventory = player:get_inventory()
 			local bags_inv_name = f("%s_bags", player_name)
 			local bags_inv = minetest.get_inventory({
 				type = "detached",
-				name = bags_inv_name
+				name = bags_inv_name,
 			})
 			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag3;1.5,5.5;1,1;]", F(bags_inv_name))
 			local bag_item = bags_inv:get_stack("bag3", 1)
 			if bag_item:is_empty() then
-				fs_parts[#fs_parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
+				fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
 			else
-				local bag_size = player_inventory:get_size("bag_inv_name")
-				fs_parts[#fs_parts + 1] = f("list[current_player;bag3contents;0.5,6.5;8,%i;]", bag_size / 8)
+				fs_parts[#fs_parts + 1] = "list[current_player;bag3contents;0.5,6.5;8,4;]"
 				fs_parts[#fs_parts + 1] = "listring[current_player;bag3contents]"
 			end
 		else
-			fs_parts[#fs_parts + 1] = "button[4.0,4.5;1,0.5;bag3;Bag 3]"
+			fs_parts[#fs_parts + 1] = f("button[4.0,4.5;1,0.5;bag3;%s]", FS("Bag 3"))
 		end
 
 		if player and selected_inventory == "bag4" then
-			fs_parts[#fs_parts + 1] = "label[5.0,4.4;Bag 4]"
-			fs_parts[#fs_parts + 1] = "label[0.5,5.5;Bag 4]"
+			fs_parts[#fs_parts + 1] = f("label[5.0,4.4;%s]", FS("Bag 4"))
+			fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", FS("Bag 4"))
 			local player_name = player:get_player_name()
-			local player_inventory = player:get_inventory()
 			local bags_inv_name = f("%s_bags", player_name)
 			local bags_inv = minetest.get_inventory({
 				type = "detached",
-				name = bags_inv_name
+				name = bags_inv_name,
 			})
 			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag4;1.5,5.5;1,1;]", F(bags_inv_name))
 			local bag_item = bags_inv:get_stack("bag4", 1)
 			if bag_item:is_empty() then
-				fs_parts[#fs_parts + 1] = "label[0.5,6.5;You have no bag in this slot.]"
+				fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
 			else
-				local bag_size = player_inventory:get_size("bag_inv_name")
-				fs_parts[#fs_parts + 1] = f("list[current_player;bag4contents;0.5,6.5;8,%i;]", bag_size / 8)
+				fs_parts[#fs_parts + 1] = "list[current_player;bag4contents;0.5,6.5;8,4;]"
 				fs_parts[#fs_parts + 1] = "listring[current_player;bag4contents]"
 			end
 		else
-			fs_parts[#fs_parts + 1] = "button[5.0,4.5;1,0.5;bag4;Bag 4]"
+			fs_parts[#fs_parts + 1] = f("button[5.0,4.5;1,0.5;bag4;%s]", FS("Bag 4"))
 		end
 	end
 
@@ -241,25 +249,18 @@ chesttools.may_use = function(pos, player)
 		return true
 	end
 	-- the shared function only kicks in if the area is protected
-	if not (minetest.is_protected(pos, name)) and minetest.is_protected(pos, " _DUMMY_PLAYER_ ") then
+	if not (minetest.is_protected(pos, name)) and minetest.is_protected(pos, "") then
 		return true
 	end
 	return false
 end
 
-local function change_color(pos)
+local function change_color(pos, direction)
 	local meta = minetest.get_meta(pos)
 	local node = minetest.get_node(pos)
 	local def = minetest.registered_nodes[node.name]
 	if def then
-		local add = 0
-		if def.paramtype2 == "colorfacedir" then
-			add = 32
-		elseif def.paramtype2 == "colorwallmounted" then
-			add = 8
-		elseif def.paramtype2 == "color4dir" then
-			add = 4
-		end
+		local add = (colorstep_by_paramtype2[def.paramtype2] or 0) * direction
 		minetest.swap_node(pos, { name = node.name, param2 = (node.param2 + add) % 256 })
 		meta:set_string("formspec", chesttools.build_chest_formspec(pos))
 	end
@@ -268,7 +269,7 @@ end
 local function set_chestname(pos, chestname)
 	local meta = minetest.get_meta(pos)
 	meta:set_string("chestname", chestname)
-	meta:set_string("infotext", '"' .. chestname .. '" Chest (owned by ' .. meta:get_string("owner") .. ")")
+	meta:set_string("infotext", S("@1 Chest (owned by @2)", chestname, meta:get_string("owner")))
 	meta:set_string("formspec", chesttools.build_chest_formspec(pos))
 end
 
@@ -285,7 +286,7 @@ local function do_all(pos, fields, player, selected)
 		or (node.name == "default:chest_locked" and pname ~= meta:get_string("owner"))
 	then
 		if node.name ~= "default:chest" then
-			minetest.chat_send_player(pname, "Sorry, you do not have access to the content of this chest.")
+			minetest.chat_send_player(pname, S("Sorry, you do not have access to the content of this chest."))
 			return
 		end
 	end
@@ -325,18 +326,13 @@ local function do_all(pos, fields, player, selected)
 	elseif fields.swap_all then
 		for i, v in ipairs(player_inv:get_list(inv_list) or {}) do
 			if chest_inv then
-				local tmp = player_inv:get_stack(inv_list, i)
 				player_inv:set_stack(inv_list, i, chest_inv:get_stack("main", i))
 				chest_inv:set_stack("main", i, v)
 			end
 		end
 	elseif fields.filter_all then
 		for i, v in ipairs(player_inv:get_list(inv_list) or {}) do
-			if
-				chest_inv
-				and chest_inv:room_for_item("main", v)
-				and chest_inv:contains_item("main", v:get_name())
-			then
+			if chest_inv and chest_inv:room_for_item("main", v) and chest_inv:contains_item("main", v:get_name()) then
 				local leftover = chest_inv:add_item("main", v)
 				player_inv:remove_item(inv_list, v)
 				if leftover and not (leftover:is_empty()) then
@@ -354,8 +350,10 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		return
 	end
 
-	if fields.change_color then
-		change_color(pos)
+	if fields.next_color then
+		change_color(pos, 1)
+	elseif fields.previous_color then
+		change_color(pos, -1)
 	end
 
 	if fields.set_chestname and fields.chestname then
@@ -391,7 +389,11 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	-- instead of updating the formspec of the chest - which would be slow - we display
 	-- the new formspec directly to the player who asked for it;
 	-- this is also necessary because players may have bags with diffrent sizes
-	minetest.show_formspec(player_name, "chesttools:shared_chest", chesttools.build_chest_formspec(pos, player, selected))
+	minetest.show_formspec(
+		player_name,
+		"chesttools:shared_chest",
+		chesttools.build_chest_formspec(pos, player, selected)
+	)
 end
 
 chesttools.update_chest = function(pos, formname, fields, player)
@@ -433,13 +435,13 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	local meta = minetest.get_meta(pos)
 	local owner = meta:get_string("owner")
 	if node.name ~= "default:chest" and owner and owner ~= pname and owner ~= "" then
-		minetest.chat_send_player(pname, "You can only upgrade your own chests.")
+		minetest.chat_send_player(pname, S("You can only upgrade your own chests."))
 		return
 	end
 
 	-- can the player build here (and thus change this chest)?
 	if minetest.is_protected(pos, pname) then
-		minetest.chat_send_player(pname, "This chest is protected from digging.")
+		minetest.chat_send_player(pname, S("This chest is protected from digging."))
 		return
 	end
 
@@ -447,7 +449,7 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	if price_amount > 0 and not (player_inv:contains_item("main", price_item .. " " .. price_amount)) then
 		minetest.chat_send_player(
 			pname,
-			"Sorry. You do not have " .. tostring(price_amount) .. " " .. price_name .. " for the update."
+			S("Sorry. You do not have @1 @2 for the update.", tostring(price_amount), price_name)
 		)
 		return
 	end
@@ -480,9 +482,9 @@ chesttools.update_chest = function(pos, formname, fields, player)
 	meta:set_string("owner", pname)
 
 	if fields.locked then
-		meta:set_string("infotext", "Locked Chest (owned by " .. pname .. ")")
+		meta:set_string("infotext", S("Locked Chest (owned by @1)", pname))
 	elseif fields.shared then
-		meta:set_string("infotext", "Shared Chest (owned by " .. pname .. ")")
+		meta:set_string("infotext", S("Shared Chest (owned by @1)", pname))
 	else
 		meta:set_string("infotext", "Chest")
 	end
@@ -512,15 +514,10 @@ chesttools.update_chest = function(pos, formname, fields, player)
 		end
 	end
 
+	local description = ItemStack(new_node_name):get_description()
 	minetest.chat_send_player(
 		pname,
-		"Chest changed to "
-			.. tostring(minetest.registered_nodes[new_node_name].description)
-			.. " for "
-			.. tostring(price_amount)
-			.. " "
-			.. price_name
-			.. "."
+		S("Chest changed to @1 for @2 @3", description, tostring(price_amount), price_name)
 	)
 end
 
@@ -562,9 +559,10 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 		sounds = default.node_sound_wood_defaults(),
 
 		after_place_node = function(pos, placer)
+			local placer_name = minetest.is_player(placer) and placer:get_player_name() or ""
 			local meta = minetest.get_meta(pos)
-			meta:set_string("owner", placer:get_player_name() or "")
-			meta:set_string("infotext", "Shared Chest (owned by " .. meta:get_string("owner") .. ")")
+			meta:set_string("owner", placer_name)
+			meta:set_string("infotext", S("Shared Chest (owned by @1)", placer_name))
 			if has_pipeworks then
 				pipeworks.after_place(pos)
 			end
@@ -572,14 +570,11 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 
 		on_construct = function(pos)
 			local meta = minetest.get_meta(pos)
-			meta:set_string("infotext", "Shared Chest")
+			meta:set_string("infotext", S("Shared Chest"))
 			meta:set_string("owner", "")
 			local inv = meta:get_inventory()
 			inv:set_size("main", 8 * 4)
-			meta:set_string(
-				"formspec",
-				chesttools.build_chest_formspec(pos)
-			)
+			meta:set_string("formspec", chesttools.build_chest_formspec(pos))
 		end,
 
 		can_dig = function(pos, player)
@@ -614,22 +609,24 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 		on_metadata_inventory_put = function(pos, listname, index, stack, player)
 			minetest.log(
 				"action",
-				player:get_player_name()
-					.. " puts "
-					.. tostring(stack:to_string())
-					.. " to shared chest at "
-					.. minetest.pos_to_string(pos)
+				f(
+					"[chesttools] %s puts %s in shared chest @ %s",
+					player:get_player_name(),
+					stack:to_string(),
+					minetest.pos_to_string(pos)
+				)
 			)
 		end,
 
 		on_metadata_inventory_take = function(pos, listname, index, stack, player)
 			minetest.log(
 				"action",
-				player:get_player_name()
-					.. " takes "
-					.. tostring(stack:to_string())
-					.. " from shared chest at "
-					.. minetest.pos_to_string(pos)
+				f(
+					"[chesttools] %s takes %s from shared chest @ %s",
+					player:get_player_name(),
+					stack:to_string(),
+					minetest.pos_to_string(pos)
+				)
 			)
 		end,
 
@@ -643,69 +640,41 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 
 		-- show chest upgrade formspec
 		on_use = function(itemstack, user, pointed_thing)
-			if user == nil or pointed_thing == nil or pointed_thing.type ~= "node" then
-				return nil
+			if not minetest.is_player(user) or not pointed_thing or pointed_thing.type ~= "node" then
+				return
 			end
-			local name = user:get_player_name()
+			local player_name = user:get_player_name()
 
-			local pos = minetest.get_pointed_thing_position(pointed_thing, mode)
-			local node = minetest.get_node_or_nil(pos)
-
-			if node == nil or not node.name then
-				return nil
-			end
+			local pos = minetest.get_pointed_thing_position(pointed_thing)
+			local node = minetest.get_node(pos)
 
 			local formspec = "label[2,0.4;Change chest type:]"
-				.. "field[20,20;0.1,0.1;pos2str;Pos;"
-				.. minetest.pos_to_string(pos)
-				.. "]"
+				.. f("field[20,20;0.1,0.1;pos2str;Pos;%s]", minetest.pos_to_string(pos))
 				.. "button_exit[2,6.0;1.5,0.5;abort;Abort]"
 
 			local can_be_upgraded = false
 			local offset = 0.5
 			local row_offset = 0
-			for nr, update_data in ipairs(chesttools.update_price) do
+			for _, update_data in ipairs(chesttools.update_price) do
 				local link = tostring(update_data[4])
 				local chest_node_name = update_data[1]
 				-- only offer possible updates
 				if minetest.registered_nodes[chest_node_name] then
 					if node.name ~= chest_node_name then
 						formspec = formspec
-							.. "item_image_button["
-							.. tostring(offset)
-							.. ","
-							.. tostring(1 + row_offset)
-							.. ";1.5,1.5;"
-							.. chest_node_name
-							.. ";"
-							.. link
-							.. ";]"
-							.. "button_exit["
-							.. tostring(offset)
-							.. ","
-							.. tostring(2.5 + row_offset)
-							.. ";1.5,0.5;"
-							.. link
-							.. ";"
-							.. link
-							.. "]"
+							.. f(
+								"item_image_button[%s,%s;1.5,1.5;%s;%s;]",
+								offset,
+								1 + row_offset,
+								chest_node_name,
+								link
+							)
+							.. f("button_exit[%s,%s;1.5,0.5;%s;%s]", offset, 2.5 + row_offset, link, link)
 					else
 						can_be_upgraded = true
 						formspec = formspec
-							.. "item_image["
-							.. tostring(offset)
-							.. ","
-							.. tostring(1 + row_offset)
-							.. ";1.5,1.5;"
-							.. chest_node_name
-							.. "]"
-							.. "label["
-							.. tostring(offset)
-							.. ","
-							.. tostring(2.5 + row_offset)
-							.. ";"
-							.. link
-							.. "]"
+							.. f("item_image[%s,%s;1.5,1.5;%s]", offset, 1 + row_offset, chest_node_name)
+							.. f("label[%s,%s;%s]", offset, 2.5 + row_offset, link)
 					end
 					offset = offset + 2
 					if offset >= 15.5 then
@@ -716,10 +685,10 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 			end
 			offset = 16
 			-- make the formspec wide enough to show all chests centered
-			formspec = "size[" .. tostring(offset) .. ",6.5]" .. formspec
+			formspec = f("size[%s,6.5]", offset) .. formspec
 			-- only show the formspec if it really is a chest that can be updated
 			if can_be_upgraded then
-				minetest.show_formspec(name, "chesttools:update", formspec)
+				minetest.show_formspec(player_name, "chesttools:update", formspec)
 			end
 			return nil
 		end,
@@ -728,7 +697,7 @@ end
 
 chesttools.register_chest(
 	"chesttools:shared_chest",
-	"Shared chest which can be used by all who can build at that spot",
+	S("Shared chest which can be used by all who can build at that spot"),
 	"shared chest",
 	"color4dir",
 	"chesttools_palette_4dir.b.png",
@@ -748,7 +717,7 @@ minetest.register_alias("chesttools:shared_chest_wall", "chesttools:shared_chest
 minetest.register_lbm({
 	name = "chesttools:update_chest_formspec",
 	label = "update chest formspec",
-	nodenames = {"chesttools:shared_chest"},
+	nodenames = { "chesttools:shared_chest" },
 	run_at_every_load = true,
 	action = function(pos, node, dtime_s)
 		local meta = minetest.get_meta(pos)

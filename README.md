@@ -18,7 +18,7 @@ Quick access buttons:
 - DA: Drop All of your currently selected inventory (main, craft, or one of the bags) directly into the chest with one click.
 - TA: Take All of the chest's inventory and put it into your currently selected inventory (main, craft or one of the bags).
 - SA: Swap All - take all inventory out of the chest and put it into your currently selected inventory - and put all from your currently selected inventory into the bag. Just one click.
-- FA: Filter All - Filter your currently selected inventory and put those items of which there's already at least one in the chest from your inventory into the chest. Good for i.e. quickly putting all ores, wood or farming products into one chest. Just put a sample inside the chest and no longer worry about having to put anything you gathered in the right chest - it'll automaticly get added if it belongs to that particular chest. 
+- FA: Filter All - Filter your currently selected inventory and put those items of which there's already at least one in the chest from your inventory into the chest. Good for i.e. quickly putting all ores, wood or farming products into one chest. Just put a sample inside the chest and no longer worry about having to put anything you gathered in the right chest - it'll automaticly get added if it belongs to that particular chest.
 
 Supports:
 - unified_inventory with its bags
