@@ -146,89 +146,33 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 	end
 
 	if minetest.get_modpath("unified_inventory") then
-		if player and selected_inventory == "bag1" then
-			fs_parts[#fs_parts + 1] = f("label[2.0,4.4;%s]", FS("Bag 1"))
-			fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", FS("Bag 1"))
-			local player_name = player:get_player_name()
-			local bags_inv_name = f("%s_bags", player_name)
-			local bags_inv = minetest.get_inventory({
-				type = "detached",
-				name = bags_inv_name,
-			})
-			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag1;1.5,5.5;1,1;]", F(bags_inv_name))
-			local bag_item = bags_inv:get_stack("bag1", 1)
-			if bag_item:is_empty() then
-				fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
+		local function dobag(i, offset)
+			local bagi = f("bag%i", i)
+			local label = FS(f("Bag %i", i))
+
+			if player and selected_inventory == bagi then
+				fs_parts[#fs_parts + 1] = f("label[%f,4.4;%s]", offset, label) -- main label
+				local player_name = player:get_player_name()
+				local bags_inv_name = f("%s_bags", player_name)
+				local bags_inv = minetest.get_inventory({ type = "detached", name = bags_inv_name })
+				fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", label) -- bag slot label
+				fs_parts[#fs_parts + 1] = f("list[detached:%s;%s;1.5,5.5;1,1;]", F(bags_inv_name), bagi)
+				local bag_item = bags_inv:get_stack(bagi, 1)
+				if bag_item:is_empty() then
+					fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
+				else
+					fs_parts[#fs_parts + 1] = f("list[current_player;%scontents;0.5,6.5;8,4;]", bagi)
+					fs_parts[#fs_parts + 1] = f("listring[current_player;%scontents]", bagi)
+				end
 			else
-				fs_parts[#fs_parts + 1] = "list[current_player;bag1contents;0.5,6.5;8,4;]"
-				fs_parts[#fs_parts + 1] = "listring[current_player;bag1contents]"
+				fs_parts[#fs_parts + 1] = f("button[%f,4.5;1,0.5;%s;%s]", offset, bagi, label)
 			end
-		else
-			fs_parts[#fs_parts + 1] = f("button[2.0,4.5;1,0.5;bag1;%s]", FS("Bag 1"))
 		end
 
-		if player and selected_inventory == "bag2" then
-			fs_parts[#fs_parts + 1] = f("label[3.0,4.4;%s]", FS("Bag 2"))
-			fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", FS("Bag 2"))
-			local player_name = player:get_player_name()
-			local bags_inv_name = f("%s_bags", player_name)
-			local bags_inv = minetest.get_inventory({
-				type = "detached",
-				name = bags_inv_name,
-			})
-			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag2;1.5,5.5;1,1;]", F(bags_inv_name))
-			local bag_item = bags_inv:get_stack("bag2", 1)
-			if bag_item:is_empty() then
-				fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
-			else
-				fs_parts[#fs_parts + 1] = "list[current_player;bag2contents;0.5,6.5;8,4;]"
-				fs_parts[#fs_parts + 1] = "listring[current_player;bag2contents]"
-			end
-		else
-			fs_parts[#fs_parts + 1] = f("button[3.0,4.5;1,0.5;bag2;%s]", FS("Bag 2"))
-		end
-
-		if player and selected_inventory == "bag3" then
-			fs_parts[#fs_parts + 1] = f("label[4.0,4.4;%s]", FS("Bag 3"))
-			fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", FS("Bag 3"))
-			local player_name = player:get_player_name()
-			local bags_inv_name = f("%s_bags", player_name)
-			local bags_inv = minetest.get_inventory({
-				type = "detached",
-				name = bags_inv_name,
-			})
-			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag3;1.5,5.5;1,1;]", F(bags_inv_name))
-			local bag_item = bags_inv:get_stack("bag3", 1)
-			if bag_item:is_empty() then
-				fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
-			else
-				fs_parts[#fs_parts + 1] = "list[current_player;bag3contents;0.5,6.5;8,4;]"
-				fs_parts[#fs_parts + 1] = "listring[current_player;bag3contents]"
-			end
-		else
-			fs_parts[#fs_parts + 1] = f("button[4.0,4.5;1,0.5;bag3;%s]", FS("Bag 3"))
-		end
-
-		if player and selected_inventory == "bag4" then
-			fs_parts[#fs_parts + 1] = f("label[5.0,4.4;%s]", FS("Bag 4"))
-			fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", FS("Bag 4"))
-			local player_name = player:get_player_name()
-			local bags_inv_name = f("%s_bags", player_name)
-			local bags_inv = minetest.get_inventory({
-				type = "detached",
-				name = bags_inv_name,
-			})
-			fs_parts[#fs_parts + 1] = f("list[detached:%s;bag4;1.5,5.5;1,1;]", F(bags_inv_name))
-			local bag_item = bags_inv:get_stack("bag4", 1)
-			if bag_item:is_empty() then
-				fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
-			else
-				fs_parts[#fs_parts + 1] = "list[current_player;bag4contents;0.5,6.5;8,4;]"
-				fs_parts[#fs_parts + 1] = "listring[current_player;bag4contents]"
-			end
-		else
-			fs_parts[#fs_parts + 1] = f("button[5.0,4.5;1,0.5;bag4;%s]", FS("Bag 4"))
-		end
+		dobag(1, 2.0)
+		dobag(2, 3.0)
+		dobag(3, 4.0)
+		dobag(4, 5.0)
 	end
 
 	return table.concat(fs_parts, "")
