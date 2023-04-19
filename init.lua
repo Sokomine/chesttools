@@ -499,144 +499,139 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 		tube = chesttools.chest_add.tube,
 		drop = node_name,
 		legacy_facedir_simple = paramtype2:match("facedir") and true or false,
-		is_ground_content = false,
-		sounds = default.node_sound_wood_defaults(),
+        is_ground_content = false,
+        sounds = default.node_sound_wood_defaults(),
 
-		after_place_node = function(pos, placer)
-			local placer_name = minetest.is_player(placer) and placer:get_player_name() or ""
-			local meta = minetest.get_meta(pos)
-			meta:set_string("owner", placer_name)
-			meta:set_string("infotext", S("Shared Chest (owned by @1)", placer_name))
-			if has_pipeworks then
-				pipeworks.after_place(pos)
-			end
-		end,
+	after_place_node = function(pos, placer)
+		local meta = minetest.get_meta(pos)
+		meta:set_string("owner", placer:get_player_name() or "")
+		meta:set_string("infotext", "Shared Chest (owned by "..meta:get_string("owner")..")")
+		if has_pipeworks then
+			pipeworks.after_place(pos)
+		end
+	end,
 
-		on_construct = function(pos)
-			local meta = minetest.get_meta(pos)
-			meta:set_string("infotext", S("Shared Chest"))
-			meta:set_string("owner", "")
-			local inv = meta:get_inventory()
-			inv:set_size("main", 8 * 4)
-			meta:set_string("formspec", chesttools.build_chest_formspec(pos))
-		end,
+	on_construct = function(pos)
+		local meta = minetest.get_meta(pos)
+		meta:set_string("infotext", "Shared Chest")
+		meta:set_string("owner", "")
+		local inv = meta:get_inventory()
+		inv:set_size("main", 8*4)
+		meta:set_string("formspec", chesttools.formspec..
+			"listring[current_name;main]"..
+			"listring[current_player;main]")
+	end,
 
-		can_dig = function(pos, player)
-			local player_name = (player and player.get_player_name and player:get_player_name()) or ""
-			local meta = minetest.get_meta(pos)
-			local inv = meta:get_inventory()
-			return player_name and inv:is_empty("main") and not minetest.is_protected(pos, player_name)
-		end,
+	can_dig = function(pos, player)
+		local player_name = (player and player.get_player_name and player:get_player_name()) or ""
+		local meta = minetest.get_meta(pos)
+		local inv = meta:get_inventory()
+		return player_name and inv:is_empty("main") and not minetest.is_protected(pos, player_name)
+	end,
 
-		allow_metadata_inventory_move = function(pos, from_list, from_index, to_list, to_index, count, player)
-			-- the shared function only kicks in if the area is protected
-			if not (chesttools.may_use(pos, player)) then
-				return 0
-			end
-			return count
-		end,
+	allow_metadata_inventory_move = function(pos, from_list, from_index,
+            to_list, to_index, count, player)
 
-		allow_metadata_inventory_put = function(pos, listname, index, stack, player)
-			if not (chesttools.may_use(pos, player)) then
-				return 0
-			end
-			return stack:get_count()
-		end,
+		-- the shared function only kicks in if the area is protected
+		if( not( chesttools.may_use( pos, player ))) then
+			return 0;
+		end
+		return count;
+	end,
 
-		allow_metadata_inventory_take = function(pos, listname, index, stack, player)
-			if not (chesttools.may_use(pos, player)) then
-				return 0
-			end
-			return stack:get_count()
-		end,
+	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
 
-		on_metadata_inventory_put = function(pos, listname, index, stack, player)
-			minetest.log(
-				"action",
-				f(
-					"[chesttools] %s puts %s in shared chest @ %s",
-					player:get_player_name(),
-					stack:to_string(),
-					minetest.pos_to_string(pos)
-				)
-			)
-		end,
+		if( not( chesttools.may_use( pos, player ))) then
+			return 0;
+		end
+		return stack:get_count();
+	end,
 
-		on_metadata_inventory_take = function(pos, listname, index, stack, player)
-			minetest.log(
-				"action",
-				f(
-					"[chesttools] %s takes %s from shared chest @ %s",
-					player:get_player_name(),
-					stack:to_string(),
-					minetest.pos_to_string(pos)
-				)
-			)
-		end,
+	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
 
-		on_receive_fields = function(pos, formname, fields, sender)
-			if not (chesttools.may_use(pos, sender)) then
-				return
-			end
-			chesttools.pos_by_player_name[sender:get_player_name()] = pos
-			chesttools.on_receive_fields(pos, formname, fields, sender)
-		end,
+		if( not( chesttools.may_use( pos, player ))) then
+			return 0;
+		end
+		return stack:get_count();
+	end,
 
-		-- show chest upgrade formspec
-		on_use = function(itemstack, user, pointed_thing)
-			if not minetest.is_player(user) or not pointed_thing or pointed_thing.type ~= "node" then
-				return
-			end
-			local player_name = user:get_player_name()
+	on_metadata_inventory_put = function(pos, listname, index, stack, player)
+		minetest.log("action", player:get_player_name()..
+			" puts "..tostring( stack:to_string() ).." to shared chest at "..minetest.pos_to_string(pos))
+	end,
 
-			local pos = minetest.get_pointed_thing_position(pointed_thing)
-			local node = minetest.get_node(pos)
+	on_metadata_inventory_take = function(pos, listname, index, stack, player)
+		minetest.log("action", player:get_player_name()..
+			" takes "..tostring( stack:to_string() ).." from shared chest at "..minetest.pos_to_string(pos))
+	end,
 
-			local formspec = "label[2,0.4;Change chest type:]"
-				.. f("field[20,20;0.1,0.1;pos2str;Pos;%s]", minetest.pos_to_string(pos))
-				.. "button_exit[2,6.0;1.5,0.5;abort;Abort]"
 
-			local can_be_upgraded = false
-			local offset = 0.5
-			local row_offset = 0
-			for _, update_data in ipairs(chesttools.update_price) do
-				local link = tostring(update_data[4])
-				local chest_node_name = update_data[1]
-				-- only offer possible updates
-				if minetest.registered_nodes[chest_node_name] then
-					if node.name ~= chest_node_name then
-						formspec = formspec
-							.. f(
-								"item_image_button[%s,%s;1.5,1.5;%s;%s;]",
-								offset,
-								1 + row_offset,
-								chest_node_name,
-								link
-							)
-							.. f("button_exit[%s,%s;1.5,0.5;%s;%s]", offset, 2.5 + row_offset, link, link)
-					else
-						can_be_upgraded = true
-						formspec = formspec
-							.. f("item_image[%s,%s;1.5,1.5;%s]", offset, 1 + row_offset, chest_node_name)
-							.. f("label[%s,%s;%s]", offset, 2.5 + row_offset, link)
-					end
-					offset = offset + 2
-					if offset >= 15.5 then
-						row_offset = 2.5
-						offset = 0.5
-					end
+	on_receive_fields = function(pos, formname, fields, sender)
+
+		if( not( chesttools.may_use( pos, sender ))) then
+			return;
+		end
+		chesttools.on_receive_fields( pos, formname, fields, sender);
+	end,
+
+	-- show chest upgrade formspec
+	on_use = function(itemstack, user, pointed_thing)
+		if( user == nil or pointed_thing == nil or pointed_thing.type ~= 'node') then
+			return nil;
+		end
+		local name = user:get_player_name();
+
+		local pos  = minetest.get_pointed_thing_position( pointed_thing, mode );
+		local node = minetest.get_node_or_nil( pos );
+
+		if( node == nil or not( node.name )) then
+			return nil;
+		end
+
+		local formspec = "label[2,0.4;Change chest type:]"..
+				 "field[20,20;0.1,0.1;pos2str;Pos;"..minetest.pos_to_string( pos ).."]"..
+				 "button_exit[2,6.0;1.5,0.5;abort;Abort]";
+
+		local can_be_upgraded = false;
+		local offset = 0.5;
+		local row_offset = 0;
+		for nr, update_data in ipairs( chesttools.update_price ) do
+			local link = tostring(update_data[4]);
+			local chest_node_name = update_data[1];
+			-- only offer possible updates
+			if( minetest.registered_nodes[ chest_node_name ]) then
+				if( node.name ~= chest_node_name ) then
+					formspec = formspec..'item_image_button['..tostring(offset)..','..
+								tostring(1+row_offset)..';1.5,1.5;'..
+								chest_node_name..';'..link..';]'..
+							'button_exit['..tostring(offset)..','..
+								tostring(2.5+row_offset)..';1.5,0.5;'..
+								link..';'..link..']';
+				else
+					can_be_upgraded = true;
+					formspec = formspec..'item_image['..tostring(offset)..','..
+								tostring(1+row_offset)..';1.5,1.5;'..
+								chest_node_name..']'..
+							'label['..tostring(offset)..','..
+								tostring(2.5+row_offset)..';'..link..']';
+				end
+				offset = offset + 2;
+				if( offset >= 15.5 ) then
+					row_offset = 2.5;
+					offset = 0.5;
 				end
 			end
-			offset = 16
-			-- make the formspec wide enough to show all chests centered
-			formspec = f("size[%s,6.5]", offset) .. formspec
-			-- only show the formspec if it really is a chest that can be updated
-			if can_be_upgraded then
-				minetest.show_formspec(player_name, "chesttools:update", formspec)
-			end
-			return nil
-		end,
-	})
+		end
+		offset = 16;
+		-- make the formspec wide enough to show all chests centered
+		formspec = 'size['..tostring(offset)..',6.5]'..formspec;
+		-- only show the formspec if it really is a chest that can be updated
+		if( can_be_upgraded ) then
+			minetest.show_formspec( name, "chesttools:update", formspec );
+		end
+		return nil;
+	end,
+})
 end
 
 chesttools.register_chest(
