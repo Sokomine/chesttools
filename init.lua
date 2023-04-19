@@ -637,10 +637,9 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 })
 end
 
-chesttools.register_chest(
-	"chesttools:shared_chest",
-	S("Shared chest which can be used by all who can build at that spot"),
-	"shared chest",
+chesttools.register_chest("chesttools:shared_chest",
+	'Shared chest which can be used by all who can build at that spot',
+	'shared chest',
 	"color4dir",
 	"chesttools_palette_4dir.b.png",
 	chesttools.chest_add.tiles,
@@ -648,9 +647,9 @@ chesttools.register_chest(
 )
 
 minetest.register_craft({
-	output = "chesttools:shared_chest",
-	type = "shapeless",
-	recipe = { "default:steel_ingot", "default:chest_locked" },
+	output = 'chesttools:shared_chest',
+	type   = 'shapeless',
+	recipe = { 'default:steel_ingot', 'default:chest_locked' },
 })
 
 minetest.register_alias("chesttools:shared_chest_4dir", "chesttools:shared_chest")
