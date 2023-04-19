@@ -294,8 +294,8 @@ local function do_all(pos, fields, player, selected)
 end
 
 chesttools.on_receive_fields = function(pos, formname, fields, player)
-	if fields.quit and fields.quit ~= "" then
-		return
+	if( fields.quit and fields.quit ~= "") then
+		return;
 	end
 
 	if fields.next_color then
@@ -330,7 +330,7 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 
 	chesttools.selected_by_player_name[player_name] = selected
 
-	if fields.drop_all or fields.take_all or fields.swap_all or fields.filter_all then
+	if( fields.drop_all or fields.take_all or fields.swap_all or fields.filter_all ) then
 		do_all(pos, fields, player, selected)
 	end
 
