@@ -520,9 +520,7 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 		meta:set_string("owner", "")
 		local inv = meta:get_inventory()
 		inv:set_size("main", 8*4)
-		meta:set_string("formspec", chesttools.formspec..
-			"listring[current_name;main]"..
-			"listring[current_player;main]")
+		meta:set_string("formspec", chesttools.build_chest_formspec(pos))
 	end,
 
 	can_dig = function(pos, player)
