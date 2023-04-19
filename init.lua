@@ -489,17 +489,16 @@ end
 minetest.register_on_player_receive_fields( chesttools.form_input_handler );
 
 chesttools.register_chest = function(node_name, desc, name, paramtype2, palette, tiles, overlay_tiles)
-	minetest.register_node(node_name, {
-		description = desc,
-		name = name,
-		paramtype2 = paramtype2,
-		tiles = tiles,
+     minetest.register_node( node_name, {
+	description = desc,
+	name   = name,
+        groups = chesttools.chest_add.groups,
+	tube   = chesttools.chest_add.tube,
+        paramtype2 = paramtype2,
+	palette = palette,
 		overlay_tiles = overlay_tiles,
 		use_texture_alpha = "clip",
 		color = "#4900ff", -- hoping this colors the inventory image...
-		palette = palette,
-		groups = chesttools.chest_add.groups,
-		tube = chesttools.chest_add.tube,
 		drop = node_name,
 		legacy_facedir_simple = paramtype2:match("facedir") and true or false,
         is_ground_content = false,
