@@ -178,25 +178,26 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 	return table.concat(fs_parts, "")
 end
 
-chesttools.may_use = function(pos, player)
+chesttools.may_use = function( pos, player )
 	if not (pos and player and player.is_player and player:is_player() and not player.is_fake_player) then
+		return false;
+	end
+	local name = player:get_player_name();
+	local meta = minetest.get_meta( pos );
+	if(not(meta)) then
 		return false
 	end
-	local name = player:get_player_name()
-	local meta = minetest.get_meta(pos)
-	if not meta then
-		return false
-	end
-	local owner = meta:get_string("owner")
+	local owner = meta:get_string( 'owner' )
 	-- the owner can access the chest
-	if owner == name or owner == "" then
-		return true
+	if( owner == name or owner == "" ) then
+		return true;
 	end
 	-- the shared function only kicks in if the area is protected
-	if not (minetest.is_protected(pos, name)) and minetest.is_protected(pos, "") then
-		return true
+	if(   not( minetest.is_protected(pos, name ))
+	      and  minetest.is_protected(pos, ' _DUMMY_PLAYER_ ')) then
+		return true;
 	end
-	return false
+	return false;
 end
 
 local function change_color(pos, direction)
