@@ -13,9 +13,6 @@ end
 
 chesttools = {}
 
-chesttools.pos_by_player_name = {}
-chesttools.selected_by_player_name = {}
-
 -- data structure: new_node_name = { item_that_acts_as_price,
 --                                   amount_of_price_item,
 --                                   name_for_field_in_menu,
@@ -125,6 +122,8 @@ function chesttools.build_chest_formspec(pos, player, selected_inventory)
 		"button[8.0,4.5;0.5,0.5;swap_all;SA]",
 		"button[8.5,4.5;0.5,0.5;filter_all;FA]",
 		"listring[context;main]",
+		f("field[20,20;0.1,0.1;pos2str;Pos;%s]", minetest.pos_to_string(pos)),
+		f("field[20,20;0.1,0.1;selected;selected;%s]", selected_inventory or "main")
 	}
 	if selected_inventory == "main" then
 		fs_parts[#fs_parts + 1] = f("label[0.0,4.4;%s]", FS("Main"))
@@ -324,10 +323,8 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 	elseif fields.bag4 then
 		selected = "bag4"
 	else
-		selected = chesttools.selected_by_player_name[player_name] or "main"
+		selected = fields.selected
 	end
-
-	chesttools.selected_by_player_name[player_name] = selected
 
 	if( fields.drop_all or fields.take_all or fields.swap_all or fields.filter_all ) then
 		do_all(pos, fields, player, selected)
