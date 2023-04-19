@@ -41,7 +41,7 @@ chesttools.update_price = {
 	{'technic:mithril_locked_chest','technic:mithril_locked_chest',1, 'mithril_locked',14, 'Mithril locked chest'},
 	};
 
-chesttools.chest_add = {}
+chesttools.chest_add = {};
 chesttools.chest_add.tiles = {
 	"chesttools_wood_chest_top.png",
 	"chesttools_wood_chest_top.png",
@@ -58,8 +58,8 @@ chesttools.chest_add.overlay_tiles = {
 	{ name = "chesttools_wood_chest_side_overlay.png", color = "white" },
 	{ name = "chesttools_wood_chest_lock_overlay.png", color = "white" },
 }
-chesttools.chest_add.groups = { snappy = 2, choppy = 2, oddly_breakable_by_hand = 2 }
-chesttools.chest_add.tube = {}
+chesttools.chest_add.groups = {snappy=2,choppy=2,oddly_breakable_by_hand=2};
+chesttools.chest_add.tube   = {};
 
 local colorstep_by_paramtype2 = {
 	color = 1,
@@ -78,8 +78,8 @@ if has_pipeworks then
 	ot[3].name = ot[3].name .. "^pipeworks_tube_connection_wooden.png"
 	ot[4].name = ot[4].name .. "^pipeworks_tube_connection_wooden.png"
 	ot[5].name = ot[5].name .. "^pipeworks_tube_connection_wooden.png"
-	chesttools.chest_add.groups =
-		{ snappy = 2, choppy = 2, oddly_breakable_by_hand = 2, tubedevice = 1, tubedevice_receiver = 1 }
+	chesttools.chest_add.groups = {snappy=2,choppy=2,oddly_breakable_by_hand=2,
+			tubedevice = 1, tubedevice_receiver = 1 };
 	chesttools.chest_add.tube = {
 		insert_object = function(pos, node, stack, direction)
 			local meta = minetest.get_meta(pos)
@@ -92,8 +92,8 @@ if has_pipeworks then
 			return inv:room_for_item("main", stack)
 		end,
 		input_inventory = "main",
-		connect_sides = { left = 1, right = 1, back = 1, front = 1, bottom = 1, top = 1 },
-	}
+		connect_sides = {left=1, right=1, back=1, front=1, bottom=1, top=1}
+	};
 end
 
 -- to build the default (node metadata) formspec, only `pos` is needed.
@@ -220,75 +220,77 @@ local function set_chestname(pos, chestname)
 end
 
 local function do_all(pos, fields, player, selected)
-	-- check if the player has sufficient access to the chest
 	local meta = minetest.get_meta(pos)
-	local node = minetest.get_node(pos)
-	local pname = player:get_player_name()
-	-- deny access for unsupported chests
-	if
-		not node
-		or (node.name == "chesttools:shared_chest" and not (chesttools.may_use(pos, player)))
-		or (node.name == "locks:shared_locked_chest" and pname ~= meta:get_string("owner"))
-		or (node.name == "default:chest_locked" and pname ~= meta:get_string("owner"))
-	then
-		if node.name ~= "default:chest" then
-			minetest.chat_send_player(pname, S("Sorry, you do not have access to the content of this chest."))
-			return
+		-- check if the player has sufficient access to the chest
+		local node = minetest.get_node( pos );
+		local pname = player:get_player_name();
+		-- deny access for unsupported chests
+		if( not( node )
+		    or (node.name == 'chesttools:shared_chest' and not( chesttools.may_use( pos, player )))
+		    or (node.name == 'locks:shared_locked_chest'and pname ~= meta:get_string('owner' ))
+		    or (node.name == 'default:chest_locked'and pname ~= meta:get_string('owner' ))) then
+			if( node.name ~= 'default:chest' ) then
+				minetest.chat_send_player( pname, 'Sorry, you do not have access to the content of this chest.');
+				return;
+			end
 		end
-	end
+		selected = fields.selected;
+		if( not( selected ) or selected == '') then
+			selected = 'main';
+		end
+		local inv_list = 'main';
+		if(     selected == 'main' ) then
+			inv_list = 'main';
+		elseif( selected == 'craft' ) then
+			inv_list = 'craft';
+		elseif( selected == 'bag1' or selected == 'bag2' or selected == 'bag3' or selected=='bag4') then
+			inv_list = selected.."contents";
+		end
 
-	local inv_list = "main"
-	if selected == "main" then
-		inv_list = "main"
-	elseif selected == "craft" then
-		inv_list = "craft"
-	elseif selected == "bag1" or selected == "bag2" or selected == "bag3" or selected == "bag4" then
-		inv_list = selected .. "contents"
-	end
+		local player_inv = player:get_inventory();
+		local chest_inv  = meta:get_inventory();
 
-	local player_inv = player:get_inventory()
-	local chest_inv = meta:get_inventory()
+		if( fields.drop_all ) then
+			for i,v in ipairs( player_inv:get_list( inv_list ) or {}) do
+				if( chest_inv and chest_inv:room_for_item('main', v)) then
+					local leftover = chest_inv:add_item( 'main', v );
+					player_inv:remove_item( inv_list, v );
+					if( leftover and not( leftover:is_empty() )) then
+						player_inv:add_item( inv_list, v );
+					end
+				end
+			end
+		elseif( fields.take_all ) then
+			for i,v in ipairs( chest_inv:get_list( 'main' ) or {}) do
+				if( player_inv:room_for_item( inv_list, v)) then
+					local leftover = player_inv:add_item( inv_list, v );
+					chest_inv:remove_item( 'main', v );
+					if( leftover and not( leftover:is_empty() )) then
+						chest_inv:add_item( 'main', v );
+					end
+				end
+			end
 
-	if fields.drop_all then
-		for i, v in ipairs(player_inv:get_list(inv_list) or {}) do
-			if chest_inv and chest_inv:room_for_item("main", v) then
-				local leftover = chest_inv:add_item("main", v)
-				player_inv:remove_item(inv_list, v)
-				if leftover and not (leftover:is_empty()) then
-					player_inv:add_item(inv_list, v)
+		elseif( fields.swap_all ) then
+			for i,v in ipairs( player_inv:get_list( inv_list ) or {}) do
+				if( chest_inv ) then
+					local tmp = player_inv:get_stack( inv_list, i );
+					player_inv:set_stack(   inv_list, i, chest_inv:get_stack( 'main', i ));
+					chest_inv:set_stack(    'main',   i, v );
+				end
+			end
+
+		elseif( fields.filter_all ) then
+			for i,v in ipairs( player_inv:get_list( inv_list ) or {}) do
+				if( chest_inv and chest_inv:room_for_item('main', v) and chest_inv:contains_item( 'main', v:get_name())) then
+					local leftover = chest_inv:add_item( 'main', v );
+					player_inv:remove_item( inv_list, v );
+					if( leftover and not( leftover:is_empty() )) then
+						player_inv:add_item( inv_list, v );
+					end
 				end
 			end
 		end
-	elseif fields.take_all then
-		for i, v in ipairs(chest_inv:get_list("main") or {}) do
-			if player_inv:room_for_item(inv_list, v) then
-				local leftover = player_inv:add_item(inv_list, v)
-				chest_inv:remove_item("main", v)
-				if leftover and not (leftover:is_empty()) then
-					chest_inv:add_item("main", v)
-				end
-			end
-		end
-	elseif fields.swap_all then
-		for i, v in ipairs(player_inv:get_list(inv_list) or {}) do
-			if chest_inv then
-				player_inv:set_stack(inv_list, i, chest_inv:get_stack("main", i))
-				chest_inv:set_stack("main", i, v)
-			end
-		end
-	elseif fields.filter_all then
-		for i, v in ipairs(player_inv:get_list(inv_list) or {}) do
-			if chest_inv and chest_inv:room_for_item("main", v) and chest_inv:contains_item("main", v:get_name()) then
-				local leftover = chest_inv:add_item("main", v)
-				player_inv:remove_item(inv_list, v)
-				if leftover and not (leftover:is_empty()) then
-					player_inv:add_item(inv_list, v)
-				end
-			end
-		end
-	end
-
-	return selected
 end
 
 chesttools.on_receive_fields = function(pos, formname, fields, player)
