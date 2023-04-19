@@ -70,8 +70,8 @@ local colorstep_by_paramtype2 = {
 
 -- additional/changed definitions for pipeworks;
 -- taken from pipeworks/compat.lua
-local has_pipeworks = minetest.get_modpath("pipeworks")
-if has_pipeworks then
+local has_pipeworks = minetest.get_modpath( 'pipeworks' )
+if( has_pipeworks ) then
 	local ot = chesttools.chest_add.overlay_tiles
 	ot[1].name = ot[1].name .. "^pipeworks_tube_connection_wooden.png"
 	ot[2].name = ot[2].name .. "^pipeworks_tube_connection_wooden.png"
