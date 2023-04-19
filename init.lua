@@ -24,21 +24,22 @@ chesttools.selected_by_player_name = {}
 --                                   new formspec string}
 -- prices always refer to upgrading a default:chest to the desired new model
 chesttools.update_price = {
-	{ "default:chest", "default:steel_ingot", 0, "normal", 1, "nothing" },
-	{ "default:chest_locked", "default:steel_ingot", 1, "locked", 2, "steel ingot" },
-	{ "chesttools:shared_chest", "default:steel_ingot", 2, "shared", 3, "steel ingot(s)" },
-	{ "locks:shared_locked_chest", "default:steel_ingot", 3, "locks", 4, "steel ingot(s)" },
-	{ "technic:iron_chest", "technic:iron_chest", 1, "iron", 5, "Iron chest" },
-	{ "technic:iron_locked_chest", "technic:iron_locked_chest", 1, "iron_locked", 6, "Iron locked chest" },
-	{ "technic:copper_chest", "technic:copper_chest", 1, "copper", 7, "Copper chest" },
-	{ "technic:copper_locked_chest", "technic:copper_locked_chest", 1, "copper_locked", 8, "Copper locked chest" },
-	{ "technic:silver_chest", "technic:silver_chest", 1, "silver", 9, "Silver chest" },
-	{ "technic:silver_locked_chest", "technic:silver_locked_chest", 1, "silver_locked", 10, "Silver locked chest" },
-	{ "technic:gold_chest", "technic:gold_chest", 1, "gold", 11, "Gold chest" },
-	{ "technic:gold_locked_chest", "technic:gold_locked_chest", 1, "gold_locked", 12, "Gold locked chest" },
-	{ "technic:mithril_chest", "technic:mithril_chest", 1, "mithril", 13, "Mithril chest" },
-	{ "technic:mithril_locked_chest", "technic:mithril_locked_chest", 1, "mithril_locked", 14, "Mithril locked chest" },
-}
+	{'default:chest',             'default:steel_ingot', 0, 'normal', 1, 'nothing'},
+	{'default:chest_locked',      'default:steel_ingot', 1, 'locked', 2, 'steel ingot'},
+	{'chesttools:shared_chest',   'default:steel_ingot', 2, 'shared', 3, 'steel ingot(s)'},
+	{'chesttools:shared_chest_wall',   'default:steel_ingot', 2, 'shared', 3, 'steel ingot(s)'},
+	{'locks:shared_locked_chest', 'default:steel_ingot', 3, 'locks',  4, 'steel ingot(s)'},
+	{'technic:iron_chest',          'technic:iron_chest',          1, 'iron',          5, 'Iron chest'},
+	{'technic:iron_locked_chest',   'technic:iron_locked_chest',   1, 'iron_locked',   6, 'Iron locked chest'},
+	{'technic:copper_chest',        'technic:copper_chest',        1, 'copper',        7, 'Copper chest'},
+	{'technic:copper_locked_chest', 'technic:copper_locked_chest', 1, 'copper_locked', 8, 'Copper locked chest'},
+	{'technic:silver_chest',        'technic:silver_chest',        1, 'silver',        9, 'Silver chest'},
+	{'technic:silver_locked_chest', 'technic:silver_locked_chest', 1, 'silver_locked',10, 'Silver locked chest'},
+	{'technic:gold_chest',          'technic:gold_chest',          1, 'gold',         11, 'Gold chest'},
+	{'technic:gold_locked_chest',   'technic:gold_locked_chest',   1, 'gold_locked',  12, 'Gold locked chest'},
+	{'technic:mithril_chest',       'technic:mithril_chest',       1, 'mithril',      13, 'Mithril chest'},
+	{'technic:mithril_locked_chest','technic:mithril_locked_chest',1, 'mithril_locked',14, 'Mithril locked chest'},
+	};
 
 chesttools.chest_add = {}
 chesttools.chest_add.tiles = {
