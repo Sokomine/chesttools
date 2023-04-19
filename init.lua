@@ -207,14 +207,14 @@ local function change_color(pos, direction)
 	local def = minetest.registered_nodes[node.name]
 	if def then
 		local add = (colorstep_by_paramtype2[def.paramtype2] or 0) * direction
-		minetest.swap_node(pos, { name = node.name, param2 = (node.param2 + add) % 256 })
+			minetest.swap_node(pos, {name=node.name, param2=(node.param2 + add) % 256})
 		meta:set_string("formspec", chesttools.build_chest_formspec(pos))
 	end
 end
 
 local function set_chestname(pos, chestname)
 	local meta = minetest.get_meta(pos)
-	meta:set_string("chestname", chestname)
+		meta:set_string( 'chestname', chestname );
 	meta:set_string("infotext", S("@1 Chest (owned by @2)", chestname, meta:get_string("owner")))
 	meta:set_string("formspec", chesttools.build_chest_formspec(pos))
 end
