@@ -27,7 +27,6 @@ chesttools.update_price = {
 	{'default:chest',             'default:steel_ingot', 0, 'normal', 1, 'nothing'},
 	{'default:chest_locked',      'default:steel_ingot', 1, 'locked', 2, 'steel ingot'},
 	{'chesttools:shared_chest',   'default:steel_ingot', 2, 'shared', 3, 'steel ingot(s)'},
-	{'chesttools:shared_chest_wall',   'default:steel_ingot', 2, 'shared', 3, 'steel ingot(s)'},
 	{'locks:shared_locked_chest', 'default:steel_ingot', 3, 'locks',  4, 'steel ingot(s)'},
 	{'technic:iron_chest',          'technic:iron_chest',          1, 'iron',          5, 'Iron chest'},
 	{'technic:iron_locked_chest',   'technic:iron_locked_chest',   1, 'iron_locked',   6, 'Iron locked chest'},
