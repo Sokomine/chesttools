@@ -341,149 +341,148 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 end
 
 chesttools.update_chest = function(pos, formname, fields, player)
-	local pname = player:get_player_name()
-	if not pos or not pos.x or not pos.y or not pos.z then
-		return
+	local pname = player:get_player_name();
+	if( not( pos ) or not( pos.x ) or not( pos.y ) or not( pos.z )) then
+		return;
 	end
-	if fields.abort and fields.abort ~= "" then
-		return
+	if( fields.abort and fields.abort ~= "") then
+		return;
 	end
-	local node = minetest.get_node(pos)
+	local node = minetest.get_node( pos );
 
-	local old_nr = -1
-	local new_nr = -1
-	for nr, update_data in ipairs(chesttools.update_price) do
-		local link = tostring(update_data[4])
-		local chest_node_name = update_data[1]
-		if chest_node_name == node.name then
-			old_nr = nr
-		elseif fields[link] and fields[link] ~= "" then
-			new_nr = nr
+	local old_nr = -1;
+	local new_nr = -1;
+	for nr, update_data in ipairs( chesttools.update_price ) do
+		local link = tostring(update_data[4]);
+		local chest_node_name = update_data[1];
+		if(     chest_node_name == node.name ) then
+			old_nr = nr;
+		elseif( fields[ link ] and fields[ link ] ~= "") then
+			new_nr = nr;
 		end
 	end
 	-- no change necessary
-	if old_nr == -1 or new_nr == -1 or old_nr == new_nr then
-		return
+	if( old_nr == -1 or new_nr == -1 or old_nr == new_nr ) then
+		return;
 	end
-	local new_node_name = chesttools.update_price[new_nr][1]
-	local price_item = chesttools.update_price[new_nr][2]
-	local price_amount = chesttools.update_price[new_nr][3]
-	local price_name = chesttools.update_price[new_nr][6]
+	local new_node_name= chesttools.update_price[ new_nr ][1];
+	local price_item   = chesttools.update_price[ new_nr ][2];
+	local price_amount = chesttools.update_price[ new_nr ][3];
+	local price_name   = chesttools.update_price[ new_nr ][6];
 	-- do they both use the same price?
-	if chesttools.update_price[old_nr][2] == price_item then
+	if( chesttools.update_price[ old_nr ][2] == price_item ) then
 		-- the price for the old chest type gets substracted
-		price_amount = price_amount - chesttools.update_price[old_nr][3]
+		price_amount = price_amount - chesttools.update_price[ old_nr ][3];
 	end
 
 	-- only work on chests owned by the player (or unlocked ones)
-	local meta = minetest.get_meta(pos)
-	local owner = meta:get_string("owner")
-	if node.name ~= "default:chest" and owner and owner ~= pname and owner ~= "" then
-		minetest.chat_send_player(pname, S("You can only upgrade your own chests."))
-		return
+	local meta = minetest.get_meta( pos );
+	local owner = meta:get_string( 'owner' );
+	if( node.name ~= 'default:chest' and owner and owner ~= pname and owner ~= "") then
+		minetest.chat_send_player( pname, 'You can only upgrade your own chests.');
+		return;
 	end
 
 	-- can the player build here (and thus change this chest)?
-	if minetest.is_protected(pos, pname) then
-		minetest.chat_send_player(pname, S("This chest is protected from digging."))
-		return
+	if( minetest.is_protected(pos, pname )) then
+		minetest.chat_send_player( pname, 'This chest is protected from digging.');
+		return;
 	end
 
-	local player_inv = player:get_inventory()
-	if price_amount > 0 and not (player_inv:contains_item("main", price_item .. " " .. price_amount)) then
-		minetest.chat_send_player(
-			pname,
-			S("Sorry. You do not have @1 @2 for the update.", tostring(price_amount), price_name)
-		)
-		return
+	local player_inv = player:get_inventory();
+	if( price_amount>0 and not( player_inv:contains_item( 'main', price_item..' '..price_amount))) then
+		minetest.chat_send_player( pname, 'Sorry. You do not have '..tostring( price_amount )..
+			' '..price_name..' for the update.');
+		return;
 	end
 
-	if price_amount > 0 then
-		player_inv:remove_item("main", price_item .. " " .. tostring(price_amount))
-	elseif price_amount < 0 then
-		price_amount = price_amount * -1
-		player_inv:add_item("main", price_item .. " " .. tostring(price_amount))
+	if(     price_amount  > 0 ) then
+		player_inv:remove_item( 'main', price_item..' '..tostring(price_amount));
+	elseif( price_amount < 0 ) then
+		price_amount = price_amount * -1;
+		player_inv:add_item(    'main', price_item..' '..tostring(price_amount));
 	end
 	-- if the old chest type had a diffrent price: return that price
-	if chesttools.update_price[old_nr][2] ~= price_item then
-		local old_price_item = chesttools.update_price[old_nr][2]
-		local old_price_amount = chesttools.update_price[old_nr][3]
-		player_inv:add_item("main", old_price_item .. " " .. tostring(old_price_amount))
+	if( chesttools.update_price[ old_nr ][2] ~= price_item ) then
+		local old_price_item   = chesttools.update_price[ old_nr ][2];
+		local old_price_amount = chesttools.update_price[ old_nr ][3];
+		player_inv:add_item(    'main', old_price_item..' '..tostring(old_price_amount));
 	end
 
 	-- copy the old inventory
-	local inv = meta:get_inventory()
-	local main_inv = {}
-	local inv_size = inv:get_size("main")
-	for i = 1, inv_size do
-		main_inv[i] = inv:get_stack("main", i)
+	local inv = meta:get_inventory();
+	local main_inv = {};
+	local inv_size = inv:get_size("main");
+	for i=1, inv_size do
+		main_inv[ i ] = inv:get_stack( "main", i);
 		-- print("Found: "..tostring( main_inv[ i ]:get_name()));
 	end
 
 	-- actually change and initialize the new chest
-	minetest.set_node(pos, { name = new_node_name, param2 = node.param2 })
+	minetest.set_node( pos, { name = new_node_name, param2 = node.param2 });
 	-- make sure the player owns the new chest
-	meta:set_string("owner", pname)
+	meta:set_string("owner", pname);
 
-	if fields.locked then
-		meta:set_string("infotext", S("Locked Chest (owned by @1)", pname))
-	elseif fields.shared then
-		meta:set_string("infotext", S("Shared Chest (owned by @1)", pname))
+	if( fields.locked ) then
+		meta:set_string("infotext", "Locked Chest (owned by "..pname..")")
+	elseif( fields.shared ) then
+		meta:set_string("infotext", "Shared Chest (owned by "..pname..")")
 	else
 		meta:set_string("infotext", "Chest")
 	end
 
 	-- put the inventory back
-	local new_inv = meta:get_inventory()
-	local new_inv_size = inv:get_size("main")
-	for i = 1, math.min(inv_size, new_inv_size) do
-		new_inv:set_stack("main", i, main_inv[i])
+	local new_inv      = meta:get_inventory();
+	local new_inv_size = inv:get_size("main");
+	for i=1, math.min( inv_size, new_inv_size ) do
+		new_inv:set_stack( "main", i, main_inv[ i ]);
 	end
 
 	-- if the new chest has fewer slots than the old one had...
-	if new_inv_size < inv_size then
+	if( new_inv_size < inv_size ) then
 		-- try to put the inventory into the new chest anyway (there
 		-- might be free slots or stacks that can take a bit more)
-		for i = new_inv_size + 1, inv_size do
+		for i=new_inv_size+1, inv_size do
 			-- try to find free space elsewhere in the chest
-			if new_inv:room_for_item("main", main_inv[i]) then
-				new_inv:add_item("main", main_inv[i])
-				-- ..or in the player's inventory
-			elseif player_inv:room_for_item("main", main_inv[i]) then
-				player_inv:add_item("main", main_inv[i])
-				-- drop the item above the chest
+			if( new_inv:room_for_item(         "main", main_inv[ i ])) then
+				new_inv:add_item(          "main", main_inv[ i ]);
+			-- ..or in the player's inventory
+			elseif( player_inv:room_for_item( "main", main_inv[ i ])) then
+				player_inv:add_item(      "main", main_inv[ i ]);
+			-- drop the item above the chest
 			else
-				minetest.add_item({ x = pos.x, y = pos.y + 1, z = pos.z }, main_inv[i])
+				minetest.add_item({x=pos.x,y=pos.y+1,z=pos.z}, main_inv[i]);
 			end
 		end
 	end
 
-	local description = ItemStack(new_node_name):get_description()
-	minetest.chat_send_player(
-		pname,
-		S("Chest changed to @1 for @2 @3", description, tostring(price_amount), price_name)
-	)
+	minetest.chat_send_player( pname, 'Chest changed to '..tostring( minetest.registered_nodes[ new_node_name].description )..
+			' for '..tostring( price_amount )..' '..price_name..'.');
 end
+
 
 -- translate general formspec calls back to specific chests/locations
-chesttools.form_input_handler = function(player, formname, fields)
-	if formname:match("^chesttools:") then
-		local pos = chesttools.pos_by_player_name[player:get_player_name()]
-
-		if pos and chesttools.may_use(pos, player) then
-			if formname == "chesttools:shared_chest" then
-				chesttools.on_receive_fields(pos, formname, fields, player)
-			elseif formname == "chesttools:update" then
-				chesttools.update_chest(pos, formname, fields, player)
-			end
+chesttools.form_input_handler = function( player, formname, fields)
+	if( (formname == "chesttools:shared_chest" or formname == "chesttools:update") and fields.pos2str ) then
+		local pos = minetest.string_to_pos( fields.pos2str );
+		if( not( chesttools.may_use( pos, player ))) then
+			return;
+		end
+		if(     formname == "chesttools:shared_chest") then
+			chesttools.on_receive_fields(pos, formname, fields, player);
+			return true; -- this function was responsible for handling the input
+		elseif( formname == "chesttools:update") then
+			chesttools.update_chest(     pos, formname, fields, player);
+			return true; -- this function was responsible for handling the input
 		end
 
-		return true -- this function was responsible for handling the input
+		return;
 	end
 end
 
+
 -- establish a callback so that input from the player-specific formspec gets handled
-minetest.register_on_player_receive_fields(chesttools.form_input_handler)
+minetest.register_on_player_receive_fields( chesttools.form_input_handler );
 
 chesttools.register_chest = function(node_name, desc, name, paramtype2, palette, tiles, overlay_tiles)
 	minetest.register_node(node_name, {
