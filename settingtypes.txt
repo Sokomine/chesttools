@@ -1,0 +1,4 @@
+# what to do if the chest is exposed to an explosion.
+# none (default) means nothing happens - the chest remains intact
+# drop means that the chest and its contents will be dropped on the ground.
+chesttools:on_blast_behavior (behavior when exploded) enum none none,drop
