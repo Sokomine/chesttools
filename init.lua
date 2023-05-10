@@ -4,6 +4,8 @@
 -- 27.07.18 Added support for shared locked chests and moved to set_node
 --          with inventory copying for cleaner operation.
 -- 05.10.14 Fixed bug in protection/access
+local f = string.format
+
 chesttools = {}
 
 
@@ -607,6 +609,25 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 		end
 		return nil;
 	end,
+
+	on_blast = function(pos, intensity)
+		if minetest.settings:get("chesttools:on_blast_behavior") == "drop" then
+			local meta = minetest.get_meta(pos)
+			local owner = meta:get_string("owner")
+			local inv = meta:get_inventory()
+			local drops = {node_name}
+			for _, drop in ipairs(inv:get_list("main")) do
+				if not drop:is_empty() then
+					table.insert(drops, drop)
+				end
+			end
+			minetest.remove_node(pos)
+			minetest.log(f("[chesttools] %s's chest @ %s destroyed in explosion, dropped %s",
+				owner, minetest.pos_to_string(pos), minetest.write_json(drops)
+			))
+			return drops
+		end
+	end,
 })
 end
 
@@ -642,4 +663,3 @@ minetest.register_craft({
 	type   = 'shapeless',
 	recipe = { 'default:steel_ingot', 'chesttools:shared_chest' },
 })
-
