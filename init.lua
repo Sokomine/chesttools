@@ -4,6 +4,13 @@
 -- 27.07.18 Added support for shared locked chests and moved to set_node
 --          with inventory copying for cleaner operation.
 -- 05.10.14 Fixed bug in protection/access
+local f = string.format
+local F = minetest.formspec_escape
+local S = minetest.get_translator("chesttools")
+local function FS(...)
+	return F(S(...))
+end
+
 chesttools = {}
 
 
@@ -36,8 +43,16 @@ chesttools.chest_add = {};
 chesttools.chest_add.tiles  = {
 --		"chesttools_blue_chest_top.png", "chesttools_blue_chest_top.png", "chesttools_blue_chest_side.png",
 --		"chesttools_blue_chest_side.png", "chesttools_blue_chest_side.png", "chesttools_blue_chest_lock.png"};
-		"chesttools_white_chest_top.png", "chesttools_white_chest_top.png", "chesttools_white_chest_side.png",
-		"chesttools_white_chest_side.png", "chesttools_white_chest_side.png", "chesttools_white_chest_lock.png"};
+		"chesttools_wood_chest_top.png", "chesttools_wood_chest_top.png", "chesttools_wood_chest_side.png",
+		"chesttools_wood_chest_side.png", "chesttools_wood_chest_side.png", "chesttools_wood_chest_lock.png"};
+chesttools.chest_add.overlay_tiles = {
+	{ name = "chesttools_wood_chest_top_overlay.png", color = "white" },
+	{ name = "chesttools_wood_chest_top_overlay.png", color = "white" },
+	{ name = "chesttools_wood_chest_side_overlay.png", color = "white" },
+	{ name = "chesttools_wood_chest_side_overlay.png", color = "white" },
+	{ name = "chesttools_wood_chest_side_overlay.png", color = "white" },
+	{ name = "chesttools_wood_chest_lock_overlay.png", color = "white" },
+}
 chesttools.chest_add.groups = {snappy=2,choppy=2,oddly_breakable_by_hand=2};
 chesttools.chest_add.tube   = {};
 
@@ -71,27 +86,101 @@ if( has_pipeworks ) then
 	};
 end
 
-chesttools.formspec = "size[9,10]"..
-			"list[current_name;main;0.5,0.3;8,4;]"..
-			"label[0.5,9.7;Name:]"..
-			"field[1.8,10.0;6,0.5;chestname;;]"..
-			"button[7.5,9.7;1,0.5;set_chestname;Store\nName]"..
---			"button[8.6,9.7;0.5,0.5;change_color;C]"..
-		"image_button[8.4,9.7;0.5,0.5;chesttools_palette.png;change_color;]"..
-			"label[0.0,4.4;Main]"..
-			"button[1.0,4.5;1,0.5;craft;Craft]"..
-			"button[7.0,4.5;0.5,0.5;drop_all;DA]"..
-			"button[7.5,4.5;0.5,0.5;take_all;TA]"..
-			"button[8.0,4.5;0.5,0.5;swap_all;SA]"..
-			"button[8.5,4.5;0.5,0.5;filter_all;FA]"..
-			"list[current_player;main;0.5,5.5;8,4;]";
+local colorstep_by_paramtype2 = {
+	color = 1,
+	colorwallmounted = 8,
+	colorfacedir = 32,
+	color4dir = 4,
+}
 
-if( minetest.get_modpath( 'unified_inventory')) then
-	chesttools.formspec = chesttools.formspec..
-			"button[2.0,4.5;1,0.5;bag1;Bag 1]"..
-			"button[3.0,4.5;1,0.5;bag2;Bag 2]"..
-			"button[4.0,4.5;1,0.5;bag3;Bag 3]"..
-			"button[5.0,4.5;1,0.5;bag4;Bag 4]";
+-- to build the default (node metadata) formspec, only `pos` is needed.
+-- when showing player inventories other than "main", both "player" and "selected_inventory" must be provided
+function chesttools.build_chest_formspec(pos, player, selected_inventory)
+	local node = minetest.get_node(pos)
+	local item = ItemStack(node.name)
+	local paramtype2 = item:get_definition().paramtype2
+	local colorstep = colorstep_by_paramtype2[paramtype2]
+	local param2 = node.param2
+	local item_meta = item:get_meta()
+	item_meta:set_int("palette_index", param2)
+	local itemstring = item:to_string()
+	local node_meta = minetest.get_meta(pos)
+	local chestname = node_meta:get_string("chestname")
+	selected_inventory = selected_inventory or "main"
+	-- the parts that are common
+	local fs_parts = {
+		"size[9.5,10]",
+		"list[context;main;0.5,0.3;8,4;]",
+		"label[0.5,9.7;Name:]",
+		f("field[1.8,10.0;6,0.5;chestname;;%s]", F(chestname) or "unconfigured"),
+		f("button[7.5,9.7;1,0.5;set_chestname;%s]", FS("Store\nName")),
+		f("label[8.65,9;#%s]", F(tostring(math.floor(param2 / colorstep)))),
+		"button[7.0,4.5;0.5,0.5;drop_all;DA]",
+		"button[7.5,4.5;0.5,0.5;take_all;TA]",
+		"button[8.0,4.5;0.5,0.5;swap_all;SA]",
+		"button[8.5,4.5;0.5,0.5;filter_all;FA]",
+		"listring[context;main]",
+		f("field[20,20;0.1,0.1;pos2str;Pos;%s]", minetest.pos_to_string(pos)),
+		f("field[20,20;0.1,0.1;selected;selected;%s]", selected_inventory or "main"),
+		-- https://github.com/minetest/minetest/issues/13435
+		f("item_image_button[8.5,8.2;1,1;%s;do_nothing;]", F(itemstring)),
+		"button[8.5,9.5;0.5,0.5;previous_color;<]",
+		"button[9.0,9.5;0.5,0.5;next_color;>]",
+	}
+	if selected_inventory == "main" then
+		table.insert_all(fs_parts, {
+			f("label[0.0,4.4;%s]", FS("Main")),
+			"list[current_player;main;0.5,5.5;8,4;]",
+			"listring[current_player;main]",
+		})
+	else
+		table.insert(fs_parts, f("button[0.0,4.5;1,0.5;main;%s]", FS("Main")))
+	end
+	if selected_inventory == "craft" then
+		table.insert_all(fs_parts, {
+			f("label[1.0,4.4;%s]", FS("Craft")),
+			f("label[0,5.5;%s]", FS("Crafting")),
+			"list[current_player;craftpreview;6.5,6.5;1,1;]",
+			"list[current_player;craft;2.5,6.5;3,3;]",
+			"listring[current_player;craft]",
+			"listring[context;main]",
+			"listring[current_player;craftpreview]",
+		})
+	else
+		fs_parts[#fs_parts + 1] = f("button[1.0,4.5;1,0.5;craft;%s]", FS("Craft"))
+	end
+
+	if minetest.get_modpath("unified_inventory") then
+		local function dobag(i, offset)
+			local bagi = f("bag%i", i)
+			local label = FS(f("Bag %i", i))
+
+			if player and selected_inventory == bagi then
+				fs_parts[#fs_parts + 1] = f("label[%f,4.4;%s]", offset, label) -- main label
+				local player_name = player:get_player_name()
+				local bags_inv_name = f("%s_bags", player_name)
+				local bags_inv = minetest.get_inventory({ type = "detached", name = bags_inv_name })
+				fs_parts[#fs_parts + 1] = f("label[0.5,5.5;%s]", label) -- bag slot label
+				fs_parts[#fs_parts + 1] = f("list[detached:%s;%s;1.5,5.5;1,1;]", F(bags_inv_name), bagi)
+				local bag_item = bags_inv:get_stack(bagi, 1)
+				if bag_item:is_empty() then
+					fs_parts[#fs_parts + 1] = f("label[0.5,6.5;%s]", FS("You have no bag in this slot."))
+				else
+					fs_parts[#fs_parts + 1] = f("list[current_player;%scontents;0.5,6.5;8,4;]", bagi)
+					fs_parts[#fs_parts + 1] = f("listring[current_player;%scontents]", bagi)
+				end
+			else
+				fs_parts[#fs_parts + 1] = f("button[%f,4.5;1,0.5;%s;%s]", offset, bagi, label)
+			end
+		end
+
+		dobag(1, 2.0)
+		dobag(2, 3.0)
+		dobag(3, 4.0)
+		dobag(4, 5.0)
+	end
+
+	return table.concat(fs_parts, "")
 end
 
 
@@ -117,25 +206,30 @@ chesttools.may_use = function( pos, player )
 	return false;
 end
 
+local function change_color(pos, direction)
+	local meta = minetest.get_meta(pos)
+	local node = minetest.get_node(pos)
+	local def = minetest.registered_nodes[node.name]
+	if def then
+		local add = (colorstep_by_paramtype2[def.paramtype2] or 0) * direction
+			minetest.swap_node(pos, {name=node.name, param2=(node.param2 + add) % 256})
+		meta:set_string("formspec", chesttools.build_chest_formspec(pos))
+	end
+end
 
 chesttools.on_receive_fields = function(pos, formname, fields, player)
 	if( fields.quit and fields.quit ~= "") then
 		return;
 	end
 
-	if( fields.change_color ) then
-		local node = minetest.get_node( pos )
-		local add = 0
-		if(node and node.name and minetest.registered_nodes[node.name]) then
-			local def = minetest.registered_nodes[node.name]
-			if(def and def.paramtype2 == "colorfacedir") then
-				add = 32
-			elseif(def and def.paramtype2 == "colorwallmounted") then
-				add = 8
-			end
-			minetest.swap_node(pos, {name=node.name, param2=(node.param2 + add) % 256})
-			return
-		end
+	if fields.do_nothing then
+		return
+	end
+
+	if fields.next_color then
+		change_color(pos, 1)
+	elseif fields.previous_color then
+		change_color(pos, -1)
 	end
 
 	local meta = minetest.get_meta( pos );
@@ -146,29 +240,8 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		meta:set_string( 'chestname', chestname );
 		meta:set_string("infotext", "\""..chestname.."\" Chest (owned by "..meta:get_string("owner")..")")
 		-- update the normal formspec
-		meta:set_string("formspec", chesttools.formspec..
-			"listring[current_name;main]"..
-			"listring[current_player;main]"..
-			"field[1.8,10.0;6,0.5;chestname;;"..chestname.."]");
+		meta:set_string("formspec", chesttools.build_chest_formspec(pos));
 	end
-
-	local formspec = "size[9,10]"..
-			"label[0.5,9.7;Name:]"..
-			"field[1.8,10.0;6,0.5;chestname;;"..tostring( chestname or "unconfigured").."]"..
-			"button[7.5,9.7;1,0.5;set_chestname;Store\nName]"..
---			"button[8.6,9.7;0.5,0.5;change_color;C]"..
-		"image_button[8.4,9.7;0.5,0.5;chesttools_palette.png;change_color;]"..
-			"list[current_name;main;0.5,0.3;8,4;]"..
-			"button[7.0,4.5;0.5,0.5;drop_all;DA]"..
-			"button[7.5,4.5;0.5,0.5;take_all;TA]"..
-			"button[8.0,4.5;0.5,0.5;swap_all;SA]"..
-			"button[8.5,4.5;0.5,0.5;filter_all;FA]"
-	local bm = "button[0.0,4.5;1,0.5;main;Main]";
-	local bc = "button[1.0,4.5;1,0.5;craft;Craft]";
-	local b1 = "button[2.0,4.5;1,0.5;bag1;Bag 1]";
-	local b2 = "button[3.0,4.5;1,0.5;bag2;Bag 2]";
-	local b3 = "button[4.0,4.5;1,0.5;bag3;Bag 3]";
-	local b4 = "button[5.0,4.5;1,0.5;bag4;Bag 4]";
 
 
 	local selected = '';
@@ -245,78 +318,30 @@ chesttools.on_receive_fields = function(pos, formname, fields, player)
 		end
 	end
 
-	local bag_nr = 0;
 	if(     fields[ 'main'] or selected=='main' or fields['set_chestname']) then
-		bag_nr = 0;
-		formspec = formspec..
-			"list[current_player;main;0.5,5.5;8,4;]"..
-			"listring[nodemeta:" .. spos .. ";main]"..
-			"listring[current_player;main]"
-		bm = "label[0.0,4.4;Main]";
 		selected = 'main';
 
 	elseif( fields[ 'craft'] or selected=='craft') then
-		bag_nr = 0;
-		formspec = formspec..
-			"label[0,5.5;Crafting]"..
-			"list[current_player;craftpreview;6.5,6.5;1,1;]"..
-			"list[current_player;craft;2.5,6.5;3,3;]"..
-			"listring[nodemeta:" .. spos .. ";main]"..
-			"listring[current_player;craft]"
-		bc = "label[1.0,4.4;Craft]";
 		selected = 'craft';
 
 	elseif( fields[ 'bag1' ] or selected=='bag1') then
-		bag_nr = 1;
-		b1     = "label[2.0,4.4;Bag 1]";
 		selected = 'bag1';
 	elseif( fields[ 'bag2' ] or selected=='bag2') then
-		bag_nr = 2;
-		b2     = "label[3.0,4.4;Bag 2]";
 		selected = 'bag2';
 	elseif( fields[ 'bag3' ] or selected=='bag3') then
-		bag_nr = 3;
-		b3     = "label[4.0,4.4;Bag 3]";
 		selected = 'bag3';
 	elseif( fields[ 'bag4' ] or selected=='bag4') then
-		bag_nr = 4;
-		b4     = "label[5.0,4.4;Bag 4]";
 		selected = 'bag4';
 	end
 
-	if( bag_nr >= 1 and bag_nr <= 4 ) then
-		formspec = formspec..
-			"label[0.5,5.5;Bag "..bag_nr.."]";
-		local stack = player:get_inventory():get_stack( "bag"..bag_nr, 1)
-		if( stack ) then
-			local pname_esc = minetest.formspec_escape(player:get_player_name());
-			formspec = formspec.."list[detached:"..pname_esc.."_bags;bag"..
-				   tostring(bag_nr)..";1.5,5.5;1,1;]";
-			local bag = minetest.get_inventory({type="detached", name=pname_esc.."_bags"},"bag"..tostring(bag_nr))
-			local slots = 4*8;
-			if( bag and not(bag:get_stack("bag"..tostring(bag_nr),1):is_empty())) then -- no bag present?
-				formspec = formspec..
-					"list[current_player;bag"..tostring(bag_nr).."contents;0.5,6.5;8,"..tostring(slots/8)..";]"..
-					"listring[nodemeta:" .. spos .. ";main]"..
-					"listring[current_player;bag"..tostring(bag_nr).."contents]"
-			else
-				formspec = formspec..
-					"label[0.5,6.5;You have no bag in this slot.]"
-			end
-		end
+	if not selected or selected == '' then
+		selected = fields.selected
 	end
-
-
-	formspec = formspec..bm..bc..b1..b2..b3..b4..
-		-- provide the position of the chest
-		"field[20,20;0.1,0.1;pos2str;Pos;"..minetest.pos_to_string( pos ).."]"..
-		-- which inventory was selected?
-		"field[20,20;0.1,0.1;selected;selected;"..selected.."]";
 
 	-- instead of updating the formspec of the chest - which would be slow - we display
 	-- the new formspec directly to the player who asked for it;
 	-- this is also necessary because players may have bags with diffrent sizes
-	minetest.show_formspec( player:get_player_name(), "chesttools:shared_chest", formspec );
+	minetest.show_formspec( player:get_player_name(), "chesttools:shared_chest", chesttools.build_chest_formspec(pos, player, selected) );
 end
 
 
@@ -477,6 +502,10 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
         legacy_facedir_simple = true,
         is_ground_content = false,
         sounds = default.node_sound_wood_defaults(),
+		overlay_tiles = chesttools.chest_add.overlay_tiles,
+		use_texture_alpha = "clip",
+		color = "#4900ff", -- hoping this colors the inventory image...
+		drop = node_name,
 
 	after_place_node = function(pos, placer)
 		local meta = minetest.get_meta(pos)
@@ -493,9 +522,7 @@ chesttools.register_chest = function(node_name, desc, name, paramtype2, palette,
 		meta:set_string("owner", "")
 		local inv = meta:get_inventory()
 		inv:set_size("main", 8*4)
-		meta:set_string("formspec", chesttools.formspec..
-			"listring[current_name;main]"..
-			"listring[current_player;main]")
+		meta:set_string("formspec", chesttools.build_chest_formspec(pos))
 	end,
 
 	can_dig = function(pos, player)
@@ -613,9 +640,10 @@ end
 chesttools.register_chest("chesttools:shared_chest",
 	'Shared chest which can be used by all who can build at that spot',
 	'shared chest',
-	'colorfacedir',
-	'chesttools_palette.png',
-	chesttools.chest_add.tiles)
+	"color4dir",
+	"chesttools_palette_4dir.b.png",
+	chesttools.chest_add.tiles,
+	chesttools.chest_add.overlay_tiles)
 
 minetest.register_craft({
 	output = 'chesttools:shared_chest',
@@ -623,23 +651,16 @@ minetest.register_craft({
 	recipe = { 'default:steel_ingot', 'default:chest_locked' },
 })
 
-chesttools.register_chest("chesttools:shared_chest_wall",
-	'Shared chest which can be used by all who can build at that spot (wallmounted)',
-	'shared chest (wallmounted)',
-	'colorwallmounted',
-	'chesttools_palette_wallmounted.png',
-	{chesttools.chest_add.tiles[6],
-	 chesttools.chest_add.tiles[3].."^[transformR180",
-	 chesttools.chest_add.tiles[3].."^[transformR270",
-	 chesttools.chest_add.tiles[3].."^[transformR90",
-	 chesttools.chest_add.tiles[1].."^[transformR90",
-	 chesttools.chest_add.tiles[1].."^[transformR90",
-	 chesttools.chest_add.tiles[1],
-	})
+minetest.register_alias("chesttools:shared_chest_4dir", "chesttools:shared_chest")
+minetest.register_alias("chesttools:shared_chest_wall", "chesttools:shared_chest")
 
-minetest.register_craft({
-	output = 'chesttools:shared_chest_wall',
-	type   = 'shapeless',
-	recipe = { 'default:steel_ingot', 'chesttools:shared_chest' },
+minetest.register_lbm({
+	name = "chesttools:update_chest_formspec",
+	label = "update chest formspec",
+	nodenames = { "chesttools:shared_chest" },
+	run_at_every_load = true,
+	action = function(pos, node, dtime_s)
+		local meta = minetest.get_meta(pos)
+		meta:set_string("formspec", chesttools.build_chest_formspec(pos))
+	end,
 })
-
